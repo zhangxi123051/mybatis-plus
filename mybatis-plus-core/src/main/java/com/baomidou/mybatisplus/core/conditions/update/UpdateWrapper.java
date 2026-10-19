@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,12 @@ package com.baomidou.mybatisplus.core.conditions.update;
 import com.baomidou.mybatisplus.core.conditions.AbstractWrapper;
 import com.baomidou.mybatisplus.core.conditions.SharedString;
 import com.baomidou.mybatisplus.core.conditions.segments.MergeSegments;
+import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
-import com.baomidou.mybatisplus.core.toolkit.StringPool;
+import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.baomidou.mybatisplus.core.toolkit.sql.SqlInjectionUtils;
+import com.baomidou.mybatisplus.core.toolkit.sql.SqlUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +36,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author hubin miemie HCL
  * @since 2018-05-30
  */
-@SuppressWarnings("serial")
 public class UpdateWrapper<T> extends AbstractWrapper<T, String, UpdateWrapper<T>>
     implements Update<UpdateWrapper<T>, String> {
 
@@ -54,16 +56,39 @@ public class UpdateWrapper<T> extends AbstractWrapper<T, String, UpdateWrapper<T
     }
 
     private UpdateWrapper(T entity, List<String> sqlSet, AtomicInteger paramNameSeq,
-                          Map<String, Object> paramNameValuePairs, MergeSegments mergeSegments,
+                          Map<String, Object> paramNameValuePairs, MergeSegments mergeSegments, SharedString paramAlias,
                           SharedString lastSql, SharedString sqlComment, SharedString sqlFirst) {
         super.setEntity(entity);
         this.sqlSet = sqlSet;
         this.paramNameSeq = paramNameSeq;
         this.paramNameValuePairs = paramNameValuePairs;
         this.expression = mergeSegments;
+        this.paramAlias = paramAlias;
         this.lastSql = lastSql;
         this.sqlComment = sqlComment;
         this.sqlFirst = sqlFirst;
+    }
+
+
+    /**
+     * 检查 SQL 注入过滤
+     */
+    private boolean checkSqlInjection;
+
+    /**
+     * 开启检查 SQL 注入
+     */
+    public UpdateWrapper<T> checkSqlInjection() {
+        this.checkSqlInjection = true;
+        return this;
+    }
+
+    @Override
+    protected String columnToString(String column) {
+        if (checkSqlInjection && SqlInjectionUtils.check(column)) {
+            throw new MybatisPlusException("Discovering SQL injection column: " + column);
+        }
+        return column;
     }
 
     @Override
@@ -71,23 +96,32 @@ public class UpdateWrapper<T> extends AbstractWrapper<T, String, UpdateWrapper<T
         if (CollectionUtils.isEmpty(sqlSet)) {
             return null;
         }
-        return String.join(StringPool.COMMA, sqlSet);
+        return String.join(Constants.COMMA, sqlSet);
     }
 
     @Override
-    public UpdateWrapper<T> set(boolean condition, String column, Object val) {
-        if (condition) {
-            sqlSet.add(String.format("%s=%s", column, formatSql("{0}", val)));
-        }
-        return typedThis;
+    public UpdateWrapper<T> set(boolean condition, String column, Object val, String mapping) {
+        return maybeDo(condition, () -> {
+            String sql = formatParam(mapping, val);
+            sqlSet.add(column + Constants.EQUALS + sql);
+        });
     }
 
     @Override
-    public UpdateWrapper<T> setSql(boolean condition, String sql) {
-        if (condition && StringUtils.isNotBlank(sql)) {
-            sqlSet.add(sql);
-        }
-        return typedThis;
+    public UpdateWrapper<T> setSql(boolean condition, String setSql, Object... params) {
+        return maybeDo(condition && StringUtils.isNotBlank(setSql), () -> {
+            sqlSet.add(formatSqlMaybeWithParam(setSql, params));
+        });
+    }
+
+    @Override
+    public UpdateWrapper<T> setIncrBy(boolean condition, String column, Number val) {
+        return maybeDo(condition, () -> sqlSet.add(SqlUtils.selfOperation(column, true, val)));
+    }
+
+    @Override
+    public UpdateWrapper<T> setDecrBy(boolean condition, String column, Number val) {
+        return maybeDo(condition, () -> sqlSet.add(SqlUtils.selfOperation(column, false, val)));
     }
 
     /**
@@ -95,13 +129,23 @@ public class UpdateWrapper<T> extends AbstractWrapper<T, String, UpdateWrapper<T
      */
     public LambdaUpdateWrapper<T> lambda() {
         return new LambdaUpdateWrapper<>(getEntity(), getEntityClass(), sqlSet, paramNameSeq, paramNameValuePairs,
-            expression, lastSql, sqlComment, sqlFirst);
+            expression, paramAlias, lastSql, sqlComment, sqlFirst, false);
     }
 
     @Override
     protected UpdateWrapper<T> instance() {
         return new UpdateWrapper<>(getEntity(), null, paramNameSeq, paramNameValuePairs, new MergeSegments(),
-            SharedString.emptyString(), SharedString.emptyString(), SharedString.emptyString());
+            paramAlias, SharedString.emptyString(), SharedString.emptyString(), SharedString.emptyString());
+    }
+
+    @Override
+    protected void onParamAliasChanged(String oldParamAlias, String paramAlias) {
+        if (sqlSet == null) {
+            return;
+        }
+        String oldPrefix = "#{" + oldParamAlias + Constants.WRAPPER_PARAM_MIDDLE;
+        String newPrefix = "#{" + paramAlias + Constants.WRAPPER_PARAM_MIDDLE;
+        sqlSet.replaceAll(sql -> sql.replace(oldPrefix, newPrefix));
     }
 
     @Override

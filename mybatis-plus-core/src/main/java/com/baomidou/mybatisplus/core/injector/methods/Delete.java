@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,23 +29,36 @@ import org.apache.ibatis.mapping.SqlSource;
  */
 public class Delete extends AbstractMethod {
 
+    public Delete() {
+        this(SqlMethod.DELETE.getMethod());
+    }
+
+    /**
+     * @param name 方法名
+     * @since 3.5.0
+     */
+    public Delete(String name) {
+        super(name);
+    }
+
     @Override
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
-        String sql;
-        SqlMethod sqlMethod = SqlMethod.LOGIC_DELETE;
         if (tableInfo.isWithLogicDelete()) {
-            sql = String.format(sqlMethod.getSql(), tableInfo.getTableName(), sqlLogicSet(tableInfo),
+            /*
+             * 逻辑删除
+             */
+            String sql = SqlMethod.LOGIC_DELETE.format(tableInfo.getTableName(), sqlLogicSet(tableInfo),
                 sqlWhereEntityWrapper(true, tableInfo),
                 sqlComment());
-            SqlSource sqlSource = languageDriver.createSqlSource(configuration, sql, modelClass);
-            return addUpdateMappedStatement(mapperClass, modelClass, getMethod(sqlMethod), sqlSource);
-        } else {
-            sqlMethod = SqlMethod.DELETE;
-            sql = String.format(sqlMethod.getSql(), tableInfo.getTableName(),
-                sqlWhereEntityWrapper(true, tableInfo),
-                sqlComment());
-            SqlSource sqlSource = languageDriver.createSqlSource(configuration, sql, modelClass);
-            return this.addDeleteMappedStatement(mapperClass, getMethod(sqlMethod), sqlSource);
+            SqlSource sqlSource = super.createSqlSource(configuration, sql, modelClass);
+            return addUpdateMappedStatement(mapperClass, modelClass, methodName, sqlSource);
         }
+
+        // 真实删除
+        String sql = SqlMethod.DELETE.format(tableInfo.getTableName(),
+            sqlWhereEntityWrapper(true, tableInfo),
+            sqlComment());
+        SqlSource sqlSource = super.createSqlSource(configuration, sql, modelClass);
+        return this.addDeleteMappedStatement(mapperClass, methodName, sqlSource);
     }
 }

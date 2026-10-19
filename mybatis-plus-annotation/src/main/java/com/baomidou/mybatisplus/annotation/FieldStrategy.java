@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +18,16 @@ package com.baomidou.mybatisplus.annotation;
 /**
  * 字段策略枚举类
  * <p>
- * 如果字段是基本数据类型则最终效果等同于 {@link #IGNORED}
+ * 如果字段是基本数据类型则最终效果等同于 {@link #ALWAYS}
  *
  * @author hubin
  * @since 2016-09-09
  */
 public enum FieldStrategy {
     /**
-     * 忽略判断
+     * 任何时候都加入 SQL
      */
-    IGNORED,
+    ALWAYS,
     /**
      * 非NULL判断
      */

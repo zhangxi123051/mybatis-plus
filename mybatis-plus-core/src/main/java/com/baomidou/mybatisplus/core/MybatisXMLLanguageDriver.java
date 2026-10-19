@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,28 +21,42 @@ import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
 import com.baomidou.mybatisplus.core.toolkit.sql.SqlUtils;
 import org.apache.ibatis.builder.IncompleteElementException;
+import org.apache.ibatis.builder.xml.XMLMapperEntityResolver;
 import org.apache.ibatis.executor.parameter.ParameterHandler;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.SqlSource;
-import org.apache.ibatis.scripting.xmltags.XMLLanguageDriver;
+import org.apache.ibatis.parsing.PropertyParser;
+import org.apache.ibatis.parsing.XNode;
+import org.apache.ibatis.parsing.XPathParser;
+import org.apache.ibatis.scripting.LanguageDriver;
+import org.apache.ibatis.scripting.defaults.RawSqlSource;
+import org.apache.ibatis.scripting.xmltags.DynamicSqlSource;
+import org.apache.ibatis.scripting.xmltags.TextSqlNode;
 import org.apache.ibatis.session.Configuration;
 
 import java.util.List;
 
 /**
- * 继承 {@link XMLLanguageDriver} 重装构造函数, 使用自己的 MybatisParameterHandler
+ * 重写来自于 {@link org.apache.ibatis.scripting.xmltags.XMLLanguageDriver} <br>
+ * 使用 MybatisParameterHandler 替换 DefaultParameterHandler <br>
+ * 使用 MybatisXMLScriptBuilder 替换 XMLScriptBuilder
  *
  * @author hubin
  * @since 2016-03-11
  */
-public class MybatisXMLLanguageDriver extends XMLLanguageDriver {
+public class MybatisXMLLanguageDriver implements LanguageDriver {
 
     @Override
-    public ParameterHandler createParameterHandler(MappedStatement mappedStatement,
-                                                   Object parameterObject, BoundSql boundSql) {
-        // TODO 使用 MybatisParameterHandler 而不是 ParameterHandler
+    public ParameterHandler createParameterHandler(MappedStatement mappedStatement, Object parameterObject,
+            BoundSql boundSql) {
         return new MybatisParameterHandler(mappedStatement, parameterObject, boundSql);
+    }
+
+    @Override
+    public SqlSource createSqlSource(Configuration configuration, XNode script, Class<?> parameterType) {
+        MybatisXMLScriptBuilder builder = new MybatisXMLScriptBuilder(configuration, script, parameterType);
+        return builder.parseScriptNode();
     }
 
     @Override
@@ -54,10 +68,23 @@ public class MybatisXMLLanguageDriver extends XMLLanguageDriver {
                 try {
                     script = SqlUtils.replaceSqlPlaceholder(script, find, config.getEscapeSymbol());
                 } catch (MybatisPlusException e) {
-                    throw new IncompleteElementException();
+                    throw new IncompleteElementException(e);
                 }
             }
         }
-        return super.createSqlSource(configuration, script, parameterType);
+        // issue #3
+        if (script.startsWith("<script>")) {
+            XPathParser parser = new XPathParser(script, false, configuration.getVariables(),
+                    new XMLMapperEntityResolver());
+            return createSqlSource(configuration, parser.evalNode("/script"), parameterType);
+        }
+        // issue #127
+        script = PropertyParser.parse(script, configuration.getVariables());
+        TextSqlNode textSqlNode = new TextSqlNode(script);
+        if (textSqlNode.isDynamic()) {
+            return new DynamicSqlSource(configuration, textSqlNode);
+        } else {
+            return new RawSqlSource(configuration, script, parameterType);
+        }
     }
 }

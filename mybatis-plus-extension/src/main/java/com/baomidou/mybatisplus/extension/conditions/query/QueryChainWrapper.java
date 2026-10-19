@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
 import com.baomidou.mybatisplus.extension.conditions.AbstractChainWrapper;
 
+import java.util.List;
 import java.util.function.Predicate;
 
 /**
@@ -35,16 +36,25 @@ public class QueryChainWrapper<T> extends AbstractChainWrapper<T, String, QueryC
     implements ChainQuery<T>, Query<QueryChainWrapper<T>, T, String> {
 
     private final BaseMapper<T> baseMapper;
+    private final Class<T> entityClass;
 
     public QueryChainWrapper(BaseMapper<T> baseMapper) {
         super();
         this.baseMapper = baseMapper;
+        this.entityClass = null;
+        super.wrapperChildren = new QueryWrapper<>();
+    }
+
+    public QueryChainWrapper(Class<T> entityClass) {
+        super();
+        this.baseMapper = null;
+        this.entityClass = entityClass;
         super.wrapperChildren = new QueryWrapper<>();
     }
 
     @Override
-    public QueryChainWrapper<T> select(String... columns) {
-        wrapperChildren.select(columns);
+    public QueryChainWrapper<T> select(boolean condition, List<String> columns) {
+        wrapperChildren.select(condition, columns);
         return typedThis;
     }
 
@@ -63,4 +73,23 @@ public class QueryChainWrapper<T> extends AbstractChainWrapper<T, String, QueryC
     public BaseMapper<T> getBaseMapper() {
         return baseMapper;
     }
+
+    /**
+     * 获取当前实体Class
+     *
+     * @return Class
+     */
+    @Override
+    public Class<T> getEntityClass() {
+        return entityClass;
+    }
+
+
+    public LambdaQueryChainWrapper<T> lambda(){
+        return new LambdaQueryChainWrapper<>(
+            baseMapper,
+            wrapperChildren.lambda()
+        );
+    }
+
 }

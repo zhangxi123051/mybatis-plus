@@ -1,27 +1,12 @@
-/*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * https://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package com.baomidou.mybatisplus.test.reflection;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Properties;
 
 import org.apache.ibatis.reflection.factory.DefaultObjectFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collection;
+import java.util.List;
+import java.util.Properties;
 
 /**
  * 对象工厂
@@ -33,7 +18,7 @@ public class ExampleObjectFactory extends DefaultObjectFactory {
 	 * serialVersionUID
 	 */
 	private static final long serialVersionUID = -2878759377109110945L;
-	
+
 	private static final Logger LOGGER = LoggerFactory.getLogger(ExampleObjectFactory.class);
 
     public <T> T create(Class<T> type) {

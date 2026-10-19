@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@ package com.baomidou.mybatisplus.extension.plugins.pagination;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
-import lombok.Getter;
 import lombok.Setter;
 
 import java.util.ArrayList;
@@ -40,53 +38,51 @@ public class Page<T> implements IPage<T> {
     /**
      * 查询数据列表
      */
-    protected List<T> records = Collections.emptyList();
+    private List<T> records = Collections.emptyList();
 
     /**
      * 总数
      */
-    protected long total = 0;
+    private long total = 0;
     /**
      * 每页显示条数，默认 10
      */
-    protected long size = 10;
+    private long size = 10;
 
     /**
      * 当前页
      */
-    protected long current = 1;
+    private long current = 1;
 
     /**
      * 排序字段信息
      */
-    @Getter
     @Setter
-    protected List<OrderItem> orders = new ArrayList<>();
+    private List<OrderItem> orders = new ArrayList<>();
 
     /**
      * 自动优化 COUNT SQL
      */
-    protected boolean optimizeCountSql = true;
+    private boolean optimizeCountSql = true;
     /**
      * 是否进行 count 查询
      */
-    protected boolean isSearchCount = true;
+    private boolean searchCount = true;
     /**
-     * 是否命中count缓存
+     * {@link #optimizeJoinOfCountSql()}
      */
-    protected boolean hitCount = false;
+    @Setter
+    private boolean optimizeJoinOfCountSql = true;
+    /**
+     * 单页分页条数限制
+     */
+    @Setter
+    private Long maxLimit;
     /**
      * countId
      */
-    @Getter
     @Setter
-    protected String countId;
-    /**
-     * countId
-     */
-    @Getter
-    @Setter
-    protected Long maxLimit;
+    private String countId;
 
     public Page() {
     }
@@ -105,17 +101,17 @@ public class Page<T> implements IPage<T> {
         this(current, size, total, true);
     }
 
-    public Page(long current, long size, boolean isSearchCount) {
-        this(current, size, 0, isSearchCount);
+    public Page(long current, long size, boolean searchCount) {
+        this(current, size, 0, searchCount);
     }
 
-    public Page(long current, long size, long total, boolean isSearchCount) {
+    public Page(long current, long size, long total, boolean searchCount) {
         if (current > 1) {
             this.current = current;
         }
         this.size = size;
         this.total = total;
-        this.isSearchCount = isSearchCount;
+        this.searchCount = searchCount;
     }
 
     /**
@@ -182,12 +178,12 @@ public class Page<T> implements IPage<T> {
 
     @Override
     public String countId() {
-        return getCountId();
+        return this.countId;
     }
 
     @Override
     public Long maxLimit() {
-        return getMaxLimit();
+        return this.maxLimit;
     }
 
     /**
@@ -241,74 +237,9 @@ public class Page<T> implements IPage<T> {
         return this;
     }
 
-    /**
-     * 设置需要进行正序排序的字段
-     * <p>
-     * Replaced:{@link #addOrder(OrderItem...)}
-     *
-     * @param ascs 字段
-     * @return 返回自身
-     * @deprecated 3.2.0
-     */
-    @Deprecated
-    public Page<T> setAscs(List<String> ascs) {
-        return CollectionUtils.isNotEmpty(ascs) ? setAsc(ascs.toArray(new String[0])) : this;
-    }
-
-    /**
-     * 升序
-     * <p>
-     * Replaced:{@link #addOrder(OrderItem...)}
-     *
-     * @param ascs 多个升序字段
-     * @deprecated 3.2.0
-     */
-    @Deprecated
-    public Page<T> setAsc(String... ascs) {
-        // 保证原来方法 set 的语意
-        removeOrder(OrderItem::isAsc);
-        for (String s : ascs) {
-            addOrder(OrderItem.asc(s));
-        }
-        return this;
-    }
-
-    /**
-     * Replaced:{@link #addOrder(OrderItem...)}
-     *
-     * @param descs 需要倒序排列的字段
-     * @return 自身
-     * @deprecated 3.2.0
-     */
-    @Deprecated
-    public Page<T> setDescs(List<String> descs) {
-        // 保证原来方法 set 的语意
-        if (CollectionUtils.isNotEmpty(descs)) {
-            removeOrder(item -> !item.isAsc());
-            for (String s : descs) {
-                addOrder(OrderItem.desc(s));
-            }
-        }
-        return this;
-    }
-
-    /**
-     * 降序，这方法名不知道是谁起的
-     * <p>
-     * Replaced:{@link #addOrder(OrderItem...)}
-     *
-     * @param descs 多个降序字段
-     * @deprecated 3.2.0
-     */
-    @Deprecated
-    public Page<T> setDesc(String... descs) {
-        setDescs(Arrays.asList(descs));
-        return this;
-    }
-
     @Override
     public List<OrderItem> orders() {
-        return getOrders();
+        return this.orders;
     }
 
     @Override
@@ -316,20 +247,17 @@ public class Page<T> implements IPage<T> {
         return optimizeCountSql;
     }
 
-    public boolean isOptimizeCountSql() {
-        return optimizeCountSql();
+    public static <T> Page<T> of(long current, long size, long total, boolean searchCount) {
+        return new Page<>(current, size, total, searchCount);
     }
 
     @Override
-    public boolean isSearchCount() {
-        if (total < 0) {
-            return false;
-        }
-        return isSearchCount;
+    public boolean optimizeJoinOfCountSql() {
+        return optimizeJoinOfCountSql;
     }
 
-    public Page<T> setSearchCount(boolean isSearchCount) {
-        this.isSearchCount = isSearchCount;
+    public Page<T> setSearchCount(boolean searchCount) {
+        this.searchCount = searchCount;
         return this;
     }
 
@@ -339,16 +267,46 @@ public class Page<T> implements IPage<T> {
     }
 
     @Override
-    public void hitCount(boolean hit) {
-        this.hitCount = hit;
+    public long getPages() {
+        // 解决 github issues/3208
+        return IPage.super.getPages();
     }
 
-    public void setHitCount(boolean hit) {
-        this.hitCount = hit;
+    /* --------------- 以下为静态构造方式 --------------- */
+    public static <T> Page<T> of(long current, long size) {
+        return of(current, size, 0);
+    }
+
+    public static <T> Page<T> of(long current, long size, long total) {
+        return of(current, size, total, true);
+    }
+
+    public static <T> Page<T> of(long current, long size, boolean searchCount) {
+        return of(current, size, 0, searchCount);
     }
 
     @Override
-    public boolean isHitCount() {
-        return hitCount;
+    public boolean searchCount() {
+        if (total < 0) {
+            return false;
+        }
+        return searchCount;
     }
+
+    @Override
+    public String toString() {
+        return "Page{" +
+            "records=" + records +
+            ", total=" + total +
+            ", size=" + size +
+            ", current=" + current +
+            ", orders=" + orders +
+            ", optimizeCountSql=" + optimizeCountSql +
+            ", searchCount=" + searchCount +
+            ", optimizeJoinOfCountSql=" + optimizeJoinOfCountSql +
+            ", maxLimit=" + maxLimit +
+            ", countId='" + countId + '\'' +
+            '}';
+    }
+
 }

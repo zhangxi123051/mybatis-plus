@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,13 @@
  */
 package com.baomidou.mybatisplus.annotation;
 
-import java.lang.annotation.*;
+
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * 序列主键策略
@@ -27,7 +33,7 @@ import java.lang.annotation.*;
 @Documented
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
+@Target({ElementType.TYPE, ElementType.ANNOTATION_TYPE})
 public @interface KeySequence {
 
     /**
@@ -36,9 +42,7 @@ public @interface KeySequence {
     String value() default "";
 
     /**
-     * id的类型
-     * @deprecated 3.1.2 自动匹配,无需指定
+     * 数据库类型，未配置默认使用注入 IKeyGenerator 实现，多个实现必须指定
      */
-    @Deprecated
-    Class<?> clazz() default Long.class;
+    DbType dbType() default DbType.OTHER;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,7 @@
  */
 package com.baomidou.mybatisplus.extension.toolkit;
 
-import com.baomidou.mybatisplus.core.parser.ISqlParser;
-import com.baomidou.mybatisplus.core.parser.SqlInfo;
-import com.baomidou.mybatisplus.extension.plugins.pagination.optimize.JsqlParserCountOptimize;
-import org.apache.ibatis.reflection.MetaObject;
-
-import java.util.Optional;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 
 /**
  * SQL 解析工具类
@@ -29,8 +24,6 @@ import java.util.Optional;
  * @since 2018-07-22
  */
 public class SqlParserUtils {
-
-    private static final ISqlParser COUNT_SQL_PARSER = new JsqlParserCountOptimize();
 
     /**
      * 获取 COUNT 原生 SQL 包装
@@ -43,23 +36,21 @@ public class SqlParserUtils {
     }
 
     /**
-     * 获取CountOptimize
+     * 去除表或字段包裹符号
      *
-     * @param optimizeCountSql 是否优化 Count SQL
-     * @param sqlParser        Count SQL 解析类
-     * @param originalSql      需要计算Count SQL
-     * @return SqlInfo
-     * @deprecated 3.4.0
+     * @param tableOrColumn 表名或字段名
+     * @return str
+     * @since 3.5.6
      */
-    @Deprecated
-    public static SqlInfo getOptimizeCountSql(boolean optimizeCountSql, ISqlParser sqlParser, String originalSql) {
-        return getOptimizeCountSql(optimizeCountSql, sqlParser, originalSql, null);
+    public static String removeWrapperSymbol(String tableOrColumn) {
+        if (StringUtils.isBlank(tableOrColumn)) {
+            return null;
+        }
+        if (tableOrColumn.startsWith("`") || tableOrColumn.startsWith("\"")
+            || tableOrColumn.startsWith("[") || tableOrColumn.startsWith("<")) {
+            return tableOrColumn.substring(1, tableOrColumn.length() - 1);
+        }
+        return tableOrColumn;
     }
 
-    public static SqlInfo getOptimizeCountSql(boolean optimizeCountSql, ISqlParser sqlParser, String originalSql, MetaObject metaObject) {
-        if (optimizeCountSql) {
-            return Optional.ofNullable(sqlParser).orElseGet(() -> COUNT_SQL_PARSER).parser(metaObject, originalSql);
-        }
-        return SqlInfo.newInstance().setSql(getOriginalCountSql(originalSql));
-    }
 }

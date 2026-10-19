@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,12 +38,15 @@ public class TypeConverts {
     public static ITypeConvert getTypeConvert(DbType dbType) {
         switch (dbType) {
             case ORACLE:
+            case POLARDB:
                 return OracleTypeConvert.INSTANCE;
             case DB2:
                 return DB2TypeConvert.INSTANCE;
             case DM:
             case GAUSS:
                 return DmTypeConvert.INSTANCE;
+            case GAUSS_DB:
+                return GaussDBSqlTypeConvert.INSTANCE;
             case KINGBASE_ES:
                 return KingbaseESTypeConvert.INSTANCE;
             case OSCAR:
@@ -59,6 +62,8 @@ public class TypeConverts {
                 return SqlServerTypeConvert.INSTANCE;
             case FIREBIRD:
                 return FirebirdTypeConvert.INSTANCE;
+            case CLICK_HOUSE:
+                return ClickHouseTypeConvert.INSTANCE;
         }
         return null;
     }
@@ -90,10 +95,11 @@ public class TypeConverts {
     static BranchBuilder<String, IColumnType> containsAny(CharSequence... values) {
         return BranchBuilder.of(s -> {
             for (CharSequence value : values) {
-                if (s.contains(value)) return true;
+                if (s.contains(value)) {
+                    return true;
+                }
             }
             return false;
         });
     }
-
 }

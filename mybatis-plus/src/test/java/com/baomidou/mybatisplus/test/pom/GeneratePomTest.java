@@ -1,18 +1,3 @@
-/*
- * Copyright (c) 2011-2019, hubin (jobob@qq.com).
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * https://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package com.baomidou.mybatisplus.test.pom;
 
 import jodd.io.FileUtil;
@@ -47,7 +32,7 @@ class GeneratePomTest {
 
     @Test
     void test() throws IOException {
-        try (InputStream inputStream = new FileInputStream("build/publications/mavenJava/pom-default.xml")) {
+        try (InputStream inputStream = new FileInputStream("build/publications/maven/pom-default.xml")) {
             JerryParser jerryParser = Jerry.create((new LagartoDOMBuilder().enableXmlMode()));
             Jerry doc = jerryParser.parse(FileUtil.readUTFString(inputStream));
             Jerry dependencies = doc.s("dependencies dependency");
@@ -56,12 +41,19 @@ class GeneratePomTest {
                 String artifactId = $this.s("artifactId").text();
                 dependenciesMap.put(artifactId, new Dependency(artifactId, $this.s("scope").text(), Boolean.parseBoolean($this.s("optional").text())));
             });
-            Dependency extension = dependenciesMap.get("mybatis-plus-extension");
+            Dependency extension = dependenciesMap.get("mybatis-plus-spring");
             Assertions.assertEquals("compile", extension.getScope());
             Assertions.assertFalse(extension.isOptional());
-            Dependency generator = dependenciesMap.get("mybatis-plus-generator");
-            Assertions.assertEquals("compile", generator.getScope());
-            Assertions.assertTrue(generator.isOptional());
+            Dependency mybatisSpring = dependenciesMap.get("mybatis-spring");
+            Assertions.assertEquals("compile", mybatisSpring.getScope());
+            Assertions.assertTrue(mybatisSpring.isOptional());
+            Dependency kotlinStdlib = dependenciesMap.get("kotlin-stdlib-jdk8");
+            Assertions.assertEquals("compile", kotlinStdlib.getScope());
+            Assertions.assertTrue(kotlinStdlib.isOptional());
+            Dependency jsqlparserLib = dependenciesMap.get("mybatis-plus-jsqlparser-4.9");
+            Assertions.assertEquals("compile", jsqlparserLib.getScope());
+            Assertions.assertTrue(jsqlparserLib.isOptional());
+
         }
     }
 

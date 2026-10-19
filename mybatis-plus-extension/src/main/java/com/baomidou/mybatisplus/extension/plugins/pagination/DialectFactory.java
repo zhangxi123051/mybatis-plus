@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,11 @@
 package com.baomidou.mybatisplus.extension.plugins.pagination;
 
 import com.baomidou.mybatisplus.annotation.DbType;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.core.toolkit.ClassUtils;
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.baomidou.mybatisplus.extension.plugins.pagination.dialects.DialectRegistry;
-import com.baomidou.mybatisplus.extension.plugins.pagination.dialects.IDialect;
-import org.apache.ibatis.session.RowBounds;
+import com.baomidou.mybatisplus.extension.plugins.pagination.dialects.*;
 
+import java.util.EnumMap;
 import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 分页方言工厂类
@@ -37,57 +30,57 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DialectFactory {
 
-    private static final DialectRegistry DIALECT_REGISTRY = new DialectRegistry();
-
-    /**
-     * 自定义方言缓存
-     */
-    private static final Map<String, IDialect> DIALECT_CACHE = new ConcurrentHashMap<>();
-
-    /**
-     * Physical Page Interceptor for all the queries with parameter
-     * {@link RowBounds}
-     *
-     * @param page         翻页对象
-     * @param buildSql     编译 SQL
-     * @param dbType       数据类型
-     * @param dialectClazz 数据库方言
-     * @return 分页模型
-     * @deprecated 3.3.1
-     */
-    @Deprecated
-    public static DialectModel buildPaginationSql(IPage<?> page, String buildSql, DbType dbType, String dialectClazz) {
-        // fix #196
-        return getDialect(dbType, dialectClazz).buildPaginationSql(buildSql, page.offset(), page.getSize());
-    }
-
-    /**
-     * 获取数据库方言
-     *
-     * @param dbType       数据库类型
-     * @param dialectClazz 自定义方言实现类
-     * @return ignore
-     * @deprecated 3.3.1 {@link #getDialect(String)}
-     */
-    @Deprecated
-    private static IDialect getDialect(DbType dbType, String dialectClazz) {
-        //这里需要注意一下，就的版本是把dbType和dialectClazz同时传进来的，所以会存在dbType是一定会有值，dialectClazz可能为空的情况，兼容需要先判断dialectClazz
-        return StringUtils.isBlank(dialectClazz) ? DIALECT_REGISTRY.getDialect(dbType) : CollectionUtils.computeIfAbsent(DIALECT_CACHE, dialectClazz, ClassUtils::newInstance);
-    }
-
-    /**
-     * 获取实现方言
-     *
-     * @param dialectClazz 方言全类名
-     * @return 方言实现对象
-     * @since 3.3.1
-     */
-    public static IDialect getDialect(String dialectClazz) {
-        return CollectionUtils.computeIfAbsent(DIALECT_CACHE, dialectClazz, ClassUtils::newInstance);
-    }
+    private static final Map<DbType, IDialect> DIALECT_ENUM_MAP = new EnumMap<>(DbType.class);
 
     public static IDialect getDialect(DbType dbType) {
-        return Optional.ofNullable(DIALECT_REGISTRY.getDialect(dbType))
-            .orElseThrow(() -> ExceptionUtils.mpe("%s database not supported.", dbType.getDb()));
+        IDialect dialect = DIALECT_ENUM_MAP.get(dbType);
+        if (null == dialect) {
+            if (dbType == DbType.OTHER) {
+                throw ExceptionUtils.mpe("%s database not supported.", dbType.getDb());
+            }
+            // mysql same type
+            else if (dbType.mysqlSameType()) {
+                dialect = new MySqlDialect();
+            }
+            // oracle same type
+            else if (dbType.oracleSameType()) {
+                dialect = new OracleDialect();
+            }
+            // postgresql same type
+            else if (dbType.postgresqlSameType()) {
+                dialect = new PostgreDialect();
+            }
+            // other types
+            else if (dbType == DbType.ORACLE_12C
+                || dbType == DbType.FIREBIRD
+                || dbType == DbType.SQL_SERVER
+                || dbType == DbType.DERBY) {
+                dialect = new Oracle12cDialect();
+            } else if (dbType == DbType.DB2) {
+                dialect = new DB2Dialect();
+            } else if (dbType == DbType.SQL_SERVER2005) {
+                dialect = new SQLServer2005Dialect();
+            } else if (dbType == DbType.SYBASE) {
+                dialect = new SybaseDialect();
+            } else if (dbType == DbType.XCloud) {
+                dialect = new XCloudDialect();
+            } else if (dbType == DbType.GBASE_8S
+                || dbType == DbType.GBASEDBT
+                || dbType == DbType.GBASE_INFORMIX
+                || dbType == DbType.SINODB) {
+                dialect = new GBase8sDialect();
+            } else if (dbType == DbType.INFORMIX) {
+                dialect = new InformixDialect();
+            } else if (dbType == DbType.TRINO
+                || dbType == DbType.PRESTO) {
+                dialect = new TrinoDialect();
+            } else if (dbType == DbType.HIVE2) {
+                dialect = new Hive2Dialect();
+            } else if (dbType == DbType.GAUSS_DB) {
+                dialect = new GaussDBDialect();
+            }
+            DIALECT_ENUM_MAP.put(dbType, dialect);
+        }
+        return dialect;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,25 +17,38 @@ package com.baomidou.mybatisplus.generator.config.converts;
 
 import com.baomidou.mybatisplus.generator.config.GlobalConfig;
 import com.baomidou.mybatisplus.generator.config.ITypeConvert;
+import com.baomidou.mybatisplus.generator.config.rules.DbColumnType;
 import com.baomidou.mybatisplus.generator.config.rules.IColumnType;
+import org.jetbrains.annotations.NotNull;
 
 import static com.baomidou.mybatisplus.generator.config.converts.TypeConverts.contains;
 import static com.baomidou.mybatisplus.generator.config.converts.TypeConverts.containsAny;
-import static com.baomidou.mybatisplus.generator.config.rules.DbColumnType.*;
+import static com.baomidou.mybatisplus.generator.config.rules.DbColumnType.BIG_DECIMAL;
+import static com.baomidou.mybatisplus.generator.config.rules.DbColumnType.BIG_INTEGER;
+import static com.baomidou.mybatisplus.generator.config.rules.DbColumnType.BLOB;
+import static com.baomidou.mybatisplus.generator.config.rules.DbColumnType.BOOLEAN;
+import static com.baomidou.mybatisplus.generator.config.rules.DbColumnType.BYTE_ARRAY;
+import static com.baomidou.mybatisplus.generator.config.rules.DbColumnType.CLOB;
+import static com.baomidou.mybatisplus.generator.config.rules.DbColumnType.DATE;
+import static com.baomidou.mybatisplus.generator.config.rules.DbColumnType.DOUBLE;
+import static com.baomidou.mybatisplus.generator.config.rules.DbColumnType.FLOAT;
+import static com.baomidou.mybatisplus.generator.config.rules.DbColumnType.INTEGER;
+import static com.baomidou.mybatisplus.generator.config.rules.DbColumnType.STRING;
 
 /**
  * DM 字段类型转换
  *
- * @author halower, hanchunlin
+ * @author halower, hanchunlin, daiby
  * @since 2019-06-27
  */
 public class DmTypeConvert implements ITypeConvert {
+
     public static final DmTypeConvert INSTANCE = new DmTypeConvert();
 
     /**
      * 字符数据类型: CHAR,CHARACTER,VARCHAR
      * <p>
-     * 数值数据类型: NUMERIC,DECIMAL,DEC,MONEY,BIT,BOOL,BOOLEAN,INTEGER,INT,BIGINT,TINYINT,BYTE,SMALLINT,BINARY,
+     * 数值数据类型: NUMBER,NUMERIC,DECIMAL,DEC,MONEY,BIT,BOOL,BOOLEAN,INTEGER,INT,BIGINT,TINYINT,BYTE,SMALLINT,BINARY,
      * VARBINARY
      * <p>
      * 近似数值数据类型: FLOAT
@@ -49,12 +62,12 @@ public class DmTypeConvert implements ITypeConvert {
      * @param config    全局配置
      * @param fieldType 字段类型
      * @return 对应的数据类型
-     * @inheritDoc
      */
     @Override
-    public IColumnType processTypeConvert(GlobalConfig config, String fieldType) {
+    public IColumnType processTypeConvert(@NotNull GlobalConfig config, @NotNull String fieldType) {
         return TypeConverts.use(fieldType)
             .test(containsAny("char", "text").then(STRING))
+            .test(contains("number").then(DmTypeConvert::toNumberType))
             .test(containsAny("numeric", "dec", "money").then(BIG_DECIMAL))
             .test(containsAny("bit", "bool").then(BOOLEAN))
             .test(contains("bigint").then(BIG_INTEGER))
@@ -69,4 +82,12 @@ public class DmTypeConvert implements ITypeConvert {
             .or(STRING);
     }
 
+    private static IColumnType toNumberType(String typeName) {
+        if (typeName.matches("number\\([0-9]\\)")) {
+            return DbColumnType.INTEGER;
+        } else if (typeName.matches("number\\(1[0-8]\\)")) {
+            return DbColumnType.LONG;
+        }
+        return DbColumnType.BIG_DECIMAL;
+    }
 }

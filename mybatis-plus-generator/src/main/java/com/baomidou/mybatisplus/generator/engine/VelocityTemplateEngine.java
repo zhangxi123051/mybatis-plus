@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,15 @@ package com.baomidou.mybatisplus.generator.engine;
 
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.generator.config.ConstVal;
+import com.baomidou.mybatisplus.generator.config.TemplateLoadWay;
 import com.baomidou.mybatisplus.generator.config.builder.ConfigBuilder;
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.Velocity;
 import org.apache.velocity.app.VelocityEngine;
+import org.jetbrains.annotations.NotNull;
 
-import java.io.BufferedWriter;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.util.Map;
 import java.util.Properties;
 
@@ -36,43 +36,58 @@ import java.util.Properties;
  * @since 2018-01-10
  */
 public class VelocityTemplateEngine extends AbstractTemplateEngine {
-
-    private static final String DOT_VM = ".vm";
     private VelocityEngine velocityEngine;
 
+    {
+        try {
+            Class.forName("org.apache.velocity.util.DuckType");
+        } catch (ClassNotFoundException e) {
+            // velocity1.x的生成格式错乱 https://github.com/baomidou/generator/issues/5
+            LOGGER.warn("Velocity 1.x is outdated, please upgrade to 2.x or later.");
+        }
+    }
+
     @Override
-    public VelocityTemplateEngine init(ConfigBuilder configBuilder) {
-        super.init(configBuilder);
+    public @NotNull VelocityTemplateEngine init(@NotNull ConfigBuilder configBuilder) {
         if (null == velocityEngine) {
             Properties p = new Properties();
-            p.setProperty(ConstVal.VM_LOAD_PATH_KEY, ConstVal.VM_LOAD_PATH_VALUE);
-            p.setProperty(Velocity.FILE_RESOURCE_LOADER_PATH, StringPool.EMPTY);
             p.setProperty(Velocity.ENCODING_DEFAULT, ConstVal.UTF8);
             p.setProperty(Velocity.INPUT_ENCODING, ConstVal.UTF8);
-            p.setProperty("file.resource.loader.unicode", StringPool.TRUE);
+            if (configBuilder.getTemplateLoadWay().isFile()) {
+                // 文件模板
+                p.setProperty(ConstVal.VM_LOAD_PATH_KEY, ConstVal.VM_LOAD_PATH_VALUE);
+                p.setProperty(Velocity.FILE_RESOURCE_LOADER_PATH, StringPool.EMPTY);
+                p.setProperty("file.resource.loader.unicode", StringPool.TRUE);
+            } else {
+                // 文本模板
+                p.setProperty(Velocity.RESOURCE_LOADER, TemplateLoadWay.STRING.getValue());
+            }
             velocityEngine = new VelocityEngine(p);
         }
         return this;
     }
 
+    @Override
+    public String writer(@NotNull Map<String, Object> objectMap, @NotNull String templateName, @NotNull String templateString) throws Exception {
+        StringWriter writer = new StringWriter();
+        velocityEngine.evaluate(new VelocityContext(objectMap), writer, templateName, templateString);
+        return writer.toString();
+    }
 
     @Override
-    public void writer(Map<String, Object> objectMap, String templatePath, String outputFile) throws Exception {
+    public void writer(@NotNull Map<String, Object> objectMap, @NotNull String templatePath, @NotNull File outputFile) throws Exception {
         Template template = velocityEngine.getTemplate(templatePath, ConstVal.UTF8);
         try (FileOutputStream fos = new FileOutputStream(outputFile);
              OutputStreamWriter ow = new OutputStreamWriter(fos, ConstVal.UTF8);
              BufferedWriter writer = new BufferedWriter(ow)) {
             template.merge(new VelocityContext(objectMap), writer);
         }
-        logger.debug("模板:" + templatePath + ";  文件:" + outputFile);
     }
 
 
     @Override
-    public String templateFilePath(String filePath) {
-        if (null == filePath || filePath.contains(DOT_VM)) {
-            return filePath;
-        }
-        return filePath + DOT_VM;
+    public @NotNull String templateFilePath(@NotNull String filePath) {
+        final String dotVm = ".vm";
+        return filePath.endsWith(dotVm) ? filePath : filePath + dotVm;
     }
 }

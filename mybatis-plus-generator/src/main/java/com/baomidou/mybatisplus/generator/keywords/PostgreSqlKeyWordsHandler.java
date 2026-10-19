@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,19 @@
  */
 package com.baomidou.mybatisplus.generator.keywords;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.*;
 
 /**
- * postgresql关键字处理
- * https://www.postgresql.org/docs/11/sql-keywords-appendix.html
+ * <a href="https://www.postgresql.org/docs/11/sql-keywords-appendix.html">postgresql关键字处理</a>
  *
  * @author nieqiurong 2020/5/9.
  * @since 3.3.2
  */
 public class PostgreSqlKeyWordsHandler extends BaseKeyWordsHandler {
-    
-    private static List<String> KEY_WORDS = new ArrayList<>(Arrays.asList(
+
+    private static final List<String> KEY_WORDS = new ArrayList<>(Arrays.asList(
         "ALL",
         "ANALYSE",
         "ANALYZE",
@@ -130,18 +129,22 @@ public class PostgreSqlKeyWordsHandler extends BaseKeyWordsHandler {
         "WINDOW",
         "WITH"
     ));
-    
+
     public PostgreSqlKeyWordsHandler() {
-        super(KEY_WORDS);
+        super(new HashSet<>(KEY_WORDS));
     }
-    
-    public PostgreSqlKeyWordsHandler(List<String> keyWords) {
+
+    public PostgreSqlKeyWordsHandler(@NotNull List<String> keyWords) {
+        super(new HashSet<>(keyWords));
+    }
+
+    public PostgreSqlKeyWordsHandler(@NotNull Set<String> keyWords) {
         super(keyWords);
     }
-    
+
     @Override
-    public String formatStyle() {
+    public @NotNull String formatStyle() {
         return "\"%s\"";
     }
-    
+
 }

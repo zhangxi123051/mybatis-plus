@@ -1,0 +1,66 @@
+diff --git a/mybatis-plus-up/src/main/java/boot3/org/mybatis/spring/boot/autoconfigure/MybatisAutoConfiguration.java b/mybatis-plus-up/src/main/java/boot3/org/mybatis/spring/boot/autoconfigure/MybatisAutoConfiguration.java
+index 5bc5c4260b9873069af7c3d58fc0412a9931e10b..ea4d594f75462f7a76c74278ba492192b69f4064 100644
+--- a/mybatis-plus-up/src/main/java/boot3/org/mybatis/spring/boot/autoconfigure/MybatisAutoConfiguration.java
++++ b/mybatis-plus-up/src/main/java/boot3/org/mybatis/spring/boot/autoconfigure/MybatisAutoConfiguration.java
+@@ -1,5 +1,5 @@
+ /*
+- *    Copyright 2015-2022 the original author or authors.
++ *    Copyright 2015-2025 the original author or authors.
+  *
+  *    Licensed under the Apache License, Version 2.0 (the "License");
+  *    you may not use this file except in compliance with the License.
+@@ -79,7 +79,7 @@ import javax.sql.DataSource;
+  * @author Kazuki Shimizu
+  * @author Eduardo Macarrón
+  */
+-@org.springframework.context.annotation.Configuration
++@org.springframework.context.annotation.Configuration(proxyBeanMethods = false)
+ @ConditionalOnClass({SqlSessionFactory.class, SqlSessionFactoryBean.class})
+ @ConditionalOnSingleCandidate(DataSource.class)
+ @EnableConfigurationProperties(MybatisProperties.class)
+@@ -139,7 +139,9 @@ public class MybatisAutoConfiguration implements InitializingBean {
+     public SqlSessionFactory sqlSessionFactory(DataSource dataSource) throws Exception {
+         SqlSessionFactoryBean factory = new SqlSessionFactoryBean();
+         factory.setDataSource(dataSource);
+-        factory.setVfs(SpringBootVFS.class);
++        if (properties.getConfiguration() == null || properties.getConfiguration().getVfsImpl() == null) {
++            factory.setVfs(SpringBootVFS.class);
++        }
+         if (StringUtils.hasText(this.properties.getConfigLocation())) {
+             factory.setConfigLocation(this.resourceLoader.getResource(this.properties.getConfigLocation()));
+         }
+@@ -189,10 +191,14 @@ public class MybatisAutoConfiguration implements InitializingBean {
+     }
+ 
+     private void applyConfiguration(SqlSessionFactoryBean factory) {
+-        Configuration configuration = this.properties.getConfiguration();
+-        if (configuration == null && !StringUtils.hasText(this.properties.getConfigLocation())) {
++        MybatisProperties.CoreConfiguration coreConfiguration = this.properties.getConfiguration();
++        Configuration configuration = null;
++        if (coreConfiguration != null || !StringUtils.hasText(this.properties.getConfigLocation())) {
+             configuration = new Configuration();
+         }
++        if (configuration != null && coreConfiguration != null) {
++            coreConfiguration.applyTo(configuration);
++        }
+         if (configuration != null && !CollectionUtils.isEmpty(this.configurationCustomizers)) {
+             for (ConfigurationCustomizer customizer : this.configurationCustomizers) {
+                 customizer.customize(configuration);
+@@ -276,7 +282,7 @@ public class MybatisAutoConfiguration implements InitializingBean {
+                     builder.addPropertyValue(
+                             "sqlSessionTemplateBeanName", sqlSessionTemplateBeanName.orElse("sqlSessionTemplate"));
+                 } else {
+-                    builder.addPropertyValue("sqlSessionFactoryBeanName", sqlSessionFactoryBeanName.get());
++                    builder.addPropertyValue("sqlSessionFactoryBeanName", sqlSessionFactoryBeanName.orElseThrow());
+                 }
+             }
+             builder.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+@@ -305,7 +311,7 @@ public class MybatisAutoConfiguration implements InitializingBean {
+      * If mapper registering configuration or mapper scanning configuration not present, this configuration allow to
+      * scan mappers based on the same component-scanning path as Spring Boot itself.
+      */
+-    @org.springframework.context.annotation.Configuration
++    @org.springframework.context.annotation.Configuration(proxyBeanMethods = false)
+     @Import(AutoConfiguredMapperScannerRegistrar.class)
+     @ConditionalOnMissingBean({MapperFactoryBean.class, MapperScannerConfigurer.class})
+     public static class MapperScannerRegistrarNotFoundConfiguration implements InitializingBean {

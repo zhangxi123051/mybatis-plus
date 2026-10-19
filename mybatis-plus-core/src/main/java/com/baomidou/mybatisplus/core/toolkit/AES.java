@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@ package com.baomidou.mybatisplus.core.toolkit;
 
 import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.Random;
 import javax.crypto.Cipher;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.nio.charset.StandardCharsets;
-import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
 
 /**
  * AES CBC模式加密工具类
@@ -32,12 +32,14 @@ import java.util.Base64;
  */
 public class AES {
 
+    private static final String CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
     /**
      * 加密
      *
      * @param data 需要加密的内容
      * @param key  加密密码
-     * @return
+     * @return 加密内容
      */
     public static byte[] encrypt(byte[] data, byte[] key) {
         try {
@@ -57,7 +59,7 @@ public class AES {
      *
      * @param data 待解密内容
      * @param key  解密密钥
-     * @return
+     * @return 解密内容
      */
     public static byte[] decrypt(byte[] data, byte[] key) {
         try {
@@ -77,7 +79,7 @@ public class AES {
      *
      * @param data 需要加密的内容
      * @param key  加密密码
-     * @return
+     * @return 加密内容
      */
     public static String encrypt(String data, String key) {
         byte[] valueByte = encrypt(data.getBytes(StandardCharsets.UTF_8), key.getBytes(StandardCharsets.UTF_8));
@@ -89,7 +91,7 @@ public class AES {
      *
      * @param data 待解密内容 base64 字符串
      * @param key  解密密钥
-     * @return
+     * @return 解密内容
      */
     public static String decrypt(String data, String key) {
         byte[] originalData = Base64.getDecoder().decode(data.getBytes());
@@ -100,10 +102,17 @@ public class AES {
     /**
      * 生成一个随机字符串密钥
      *
-     * @return
-     * @throws NoSuchAlgorithmException
+     * @return 密钥
      */
     public static String generateRandomKey() {
-        return IdWorker.get32UUID().substring(0, 16);
+        Random random = new Random();
+        StringBuilder buffer = new StringBuilder();
+        int keySize = 16;
+        int length = CHARS.length();
+        while (keySize-- != 0) {
+            buffer.append(CHARS.charAt(random.nextInt(length)));
+        }
+        return buffer.toString();
     }
+
 }

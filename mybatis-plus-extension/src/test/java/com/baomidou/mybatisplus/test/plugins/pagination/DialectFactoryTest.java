@@ -1,47 +1,59 @@
-/*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * https://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package com.baomidou.mybatisplus.test.plugins.pagination;
 
 import com.baomidou.mybatisplus.annotation.DbType;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.DialectFactory;
-import com.baomidou.mybatisplus.extension.plugins.pagination.DialectModel;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.plugins.pagination.dialects.GaussDBDialect;
 import com.baomidou.mybatisplus.extension.plugins.pagination.dialects.MySqlDialect;
+import com.baomidou.mybatisplus.extension.plugins.pagination.dialects.OracleDialect;
+import com.baomidou.mybatisplus.extension.plugins.pagination.dialects.PostgreDialect;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 /**
- * @author nieqiuqiu
+ * @author nieqiurong
  */
-class DialectFactoryTest {
+public class DialectFactoryTest {
 
     @Test
     void test() {
-        DialectModel dialectModel;
-        IPage<Object> page = new Page<>();
-        //使用默认方言
-        dialectModel = DialectFactory.buildPaginationSql(page, "select * from test ", com.baomidou.mybatisplus.annotation.DbType.MYSQL, null);
-        Assertions.assertEquals(dialectModel.getDialectSql(), "select * from test  LIMIT ?");
-        dialectModel = DialectFactory.buildPaginationSql(page, "select * from test ", DbType.MYSQL, null);
-        Assertions.assertEquals(dialectModel.getDialectSql(), "select * from test  LIMIT ?");
-        //使用默认自定义方言
-        dialectModel = DialectFactory.buildPaginationSql(page, "select * from test ", com.baomidou.mybatisplus.annotation.DbType.H2, MySqlDialect.class.getName());
-        Assertions.assertEquals(dialectModel.getDialectSql(), "select * from test  LIMIT ?");
-        dialectModel = DialectFactory.buildPaginationSql(page, "select * from test ", DbType.H2, MySqlDialect.class.getName());
-        Assertions.assertEquals(dialectModel.getDialectSql(), "select * from test  LIMIT ?");
+        Assertions.assertInstanceOf(MySqlDialect.class, DialectFactory.getDialect(DbType.MYSQL));
+        Assertions.assertInstanceOf(MySqlDialect.class, DialectFactory.getDialect(DbType.MARIADB));
+        Assertions.assertInstanceOf(MySqlDialect.class, DialectFactory.getDialect(DbType.GBASE));
+        Assertions.assertInstanceOf(MySqlDialect.class, DialectFactory.getDialect(DbType.OSCAR));
+        Assertions.assertInstanceOf(MySqlDialect.class, DialectFactory.getDialect(DbType.XU_GU));
+        Assertions.assertInstanceOf(MySqlDialect.class, DialectFactory.getDialect(DbType.CLICK_HOUSE));
+        Assertions.assertInstanceOf(MySqlDialect.class, DialectFactory.getDialect(DbType.OCEAN_BASE));
+        Assertions.assertInstanceOf(MySqlDialect.class, DialectFactory.getDialect(DbType.CUBRID));
+        Assertions.assertInstanceOf(MySqlDialect.class, DialectFactory.getDialect(DbType.SUNDB));
+        Assertions.assertInstanceOf(MySqlDialect.class, DialectFactory.getDialect(DbType.GOLDENDB));
+        Assertions.assertInstanceOf(MySqlDialect.class, DialectFactory.getDialect(DbType.YASDB));
+
+        Assertions.assertInstanceOf(OracleDialect.class, DialectFactory.getDialect(DbType.DM));
+        Assertions.assertInstanceOf(OracleDialect.class, DialectFactory.getDialect(DbType.ORACLE));
+        Assertions.assertInstanceOf(OracleDialect.class, DialectFactory.getDialect(DbType.POLARDB));
+        Assertions.assertInstanceOf(OracleDialect.class, DialectFactory.getDialect(DbType.GAUSS));
+
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.POSTGRE_SQL));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.H2));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.LEALONE));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.SQLITE));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.HSQL));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.KINGBASE_ES));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.PHOENIX));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.SAP_HANA));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.IMPALA));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.HIGH_GO));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.VERTICA));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.REDSHIFT));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.OPENGAUSS));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.TDENGINE));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.UXDB));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.GBASE8S_PG));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.GBASE_8C));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.VASTBASE));
+        Assertions.assertInstanceOf(PostgreDialect.class, DialectFactory.getDialect(DbType.DUCKDB));
+
+        Assertions.assertInstanceOf(GaussDBDialect.class, DialectFactory.getDialect(DbType.GAUSS_DB));
     }
+
 }

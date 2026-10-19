@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,17 @@ package com.baomidou.mybatisplus.core.injector.methods;
 
 import com.baomidou.mybatisplus.core.enums.SqlMethod;
 import com.baomidou.mybatisplus.core.injector.AbstractMethod;
+import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.baomidou.mybatisplus.core.toolkit.sql.SqlScriptUtils;
 import org.apache.ibatis.mapping.MappedStatement;
 import org.apache.ibatis.mapping.SqlSource;
+
+import java.util.List;
+
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 /**
  * 根据 ID 删除
@@ -29,22 +37,57 @@ import org.apache.ibatis.mapping.SqlSource;
  */
 public class DeleteById extends AbstractMethod {
 
+    public DeleteById() {
+        this(SqlMethod.DELETE_BY_ID.getMethod());
+    }
+
+    /**
+     * @param name 方法名
+     * @since 3.5.0
+     */
+    public DeleteById(String name) {
+        super(name);
+    }
+
     @Override
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
         String sql;
-        SqlMethod sqlMethod = SqlMethod.LOGIC_DELETE_BY_ID;
         if (tableInfo.isWithLogicDelete()) {
-            sql = String.format(sqlMethod.getSql(), tableInfo.getTableName(), sqlLogicSet(tableInfo),
-                tableInfo.getKeyColumn(), tableInfo.getKeyProperty(),
-                tableInfo.getLogicDeleteSql(true, true));
-            SqlSource sqlSource = languageDriver.createSqlSource(configuration, sql, Object.class);
-            return addUpdateMappedStatement(mapperClass, modelClass, getMethod(sqlMethod), sqlSource);
+            List<TableFieldInfo> fieldInfos = tableInfo.getFieldList().stream()
+                .filter(TableFieldInfo::isWithUpdateFill)
+                .filter(f -> !f.isLogicDelete())
+                .collect(toList());
+            TableFieldInfo logicDeleteField = tableInfo.getLogicDeleteFieldInfo();
+            boolean logicDeleteWithFill = logicDeleteField != null && logicDeleteField.isWithUpdateFill();
+            if (CollectionUtils.isNotEmpty(fieldInfos) || logicDeleteWithFill) {
+                String entityCondition = "@org.apache.ibatis.reflection.SystemMetaObject@forObject(_parameter).findProperty('" + tableInfo.getKeyProperty() + "', false) != null";
+                String fillSetSql = fieldInfos.stream().map(i -> i.getSqlSet(EMPTY)).collect(joining(EMPTY));
+                String sqlSet;
+                if (logicDeleteWithFill) {
+                    String fillSql = logicDeleteField.getSqlSet(true, EMPTY);
+                    fillSql = fillSql.substring(0, fillSql.length() - COMMA.length());
+                    String logicDeleteChoose = SqlScriptUtils.convertChoose(entityCondition, fillSql, tableInfo.getLogicDeleteSql(false, false));
+                    if (CollectionUtils.isNotEmpty(fieldInfos)) {
+                        sqlSet = "SET " + SqlScriptUtils.convertIf(fillSetSql, entityCondition, true) + logicDeleteChoose;
+                    } else {
+                        sqlSet = "SET " + logicDeleteChoose;
+                    }
+                } else {
+                    sqlSet = "SET " + SqlScriptUtils.convertIf(fillSetSql, entityCondition, true)
+                        + tableInfo.getLogicDeleteSql(false, false);
+                }
+                sql = SqlMethod.LOGIC_DELETE_BY_ID.format(tableInfo.getTableName(), sqlSet, tableInfo.getKeyColumn(),
+                    tableInfo.getKeyProperty(), tableInfo.getLogicDeleteSql(true, true));
+            } else {
+                sql = SqlMethod.LOGIC_DELETE_BY_ID.format(tableInfo.getTableName(), sqlLogicSet(tableInfo),
+                    tableInfo.getKeyColumn(), tableInfo.getKeyProperty(),
+                    tableInfo.getLogicDeleteSql(true, true));
+            }
+            SqlSource sqlSource = super.createSqlSource(configuration, sql, Object.class);
+            return addUpdateMappedStatement(mapperClass, modelClass, methodName, sqlSource);
         } else {
-            sqlMethod = SqlMethod.DELETE_BY_ID;
-            sql = String.format(sqlMethod.getSql(), tableInfo.getTableName(), tableInfo.getKeyColumn(),
-                tableInfo.getKeyProperty());
-            SqlSource sqlSource = languageDriver.createSqlSource(configuration, sql, Object.class);
-            return this.addDeleteMappedStatement(mapperClass, getMethod(sqlMethod), sqlSource);
+            sql = SqlMethod.DELETE_BY_ID.format(tableInfo.getTableName(), tableInfo.getKeyColumn(), tableInfo.getKeyProperty());
+            return this.addDeleteMappedStatement(mapperClass, methodName, super.createSqlSource(configuration, sql, Object.class));
         }
     }
 }

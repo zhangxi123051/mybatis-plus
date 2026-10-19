@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package com.baomidou.mybatisplus.core.conditions.segments;
 
 import com.baomidou.mybatisplus.core.conditions.ISqlSegment;
+import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -30,7 +31,6 @@ import java.util.List;
  * @since 2018-06-27
  */
 @Getter
-@SuppressWarnings("serial")
 public class MergeSegments implements ISqlSegment {
 
     private final NormalSegmentList normal = new NormalSegmentList();
@@ -74,12 +74,34 @@ public class MergeSegments implements ISqlSegment {
         return sqlSegment;
     }
 
+    public void clearSqlSegmentCache() {
+        sqlSegment = StringPool.EMPTY;
+        cacheSqlSegment = false;
+        normal.clearSqlSegmentCache();
+        groupBy.clearSqlSegmentCache();
+        having.clearSqlSegmentCache();
+        orderBy.clearSqlSegmentCache();
+    }
+
+    public void changeParamAlias(String oldParamAlias, String paramAlias) {
+        if (cacheSqlSegment) {
+            sqlSegment = sqlSegment.replace("#{" + oldParamAlias + Constants.WRAPPER_PARAM_MIDDLE,
+                "#{" + paramAlias + Constants.WRAPPER_PARAM_MIDDLE);
+        }
+        normal.changeParamAlias(oldParamAlias, paramAlias);
+        groupBy.changeParamAlias(oldParamAlias, paramAlias);
+        having.changeParamAlias(oldParamAlias, paramAlias);
+        orderBy.changeParamAlias(oldParamAlias, paramAlias);
+    }
+
     /**
      * 清理
      *
      * @since 3.3.1
      */
     public void clear() {
+        sqlSegment = StringPool.EMPTY;
+        cacheSqlSegment = true;
         normal.clear();
         groupBy.clear();
         having.clear();

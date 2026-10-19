@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,9 @@
  */
 package com.baomidou.mybatisplus.generator.config;
 
-import java.util.List;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.Collection;
 
 /**
  * 关键字处理接口
@@ -24,37 +26,40 @@ import java.util.List;
  * @since 3.3.2
  */
 public interface IKeyWordsHandler {
-    
+
     /**
      * 获取关键字
      *
      * @return 关键字集合
      */
-    List<String> getKeyWords();
-    
+    @NotNull
+    Collection<String> getKeyWords();
+
     /**
      * 格式化关键字格式
      *
      * @return 格式
      */
+    @NotNull
     String formatStyle();
-    
+
     /**
      * 是否为关键字
      *
      * @param columnName 字段名称
      * @return 是否为关键字
      */
-    boolean isKeyWords(String columnName);
-    
+    boolean isKeyWords(@NotNull String columnName);
+
     /**
      * 格式化字段
      *
      * @param columnName 字段名称
      * @return 格式化字段
      */
-    default String formatColumn(String columnName) {
+    @NotNull
+    default String formatColumn(@NotNull String columnName) {
         return String.format(formatStyle(), columnName);
     }
-    
+
 }

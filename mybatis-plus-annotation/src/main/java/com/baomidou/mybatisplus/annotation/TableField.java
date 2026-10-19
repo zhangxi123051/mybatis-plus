@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ public @interface TableField {
     /**
      * 字段 where 实体查询比较条件
      * <p>
-     * 默认 {@link SqlCondition.EQUAL}
+     * 默认 {@link SqlCondition#EQUAL}
      */
     String condition() default "";
 
@@ -73,9 +73,11 @@ public @interface TableField {
     /**
      * 字段验证策略之 insert: 当insert操作时，该字段拼接insert语句时的策略
      * <p>
-     * IGNORED: 直接拼接 insert into table_a(column) values (#{columnProperty});
+     * ALWAYS: 直接拼接 insert into table_a(column) values (#{columnProperty});
      * NOT_NULL: insert into table_a(<if test="columnProperty != null">column</if>) values (<if test="columnProperty != null">#{columnProperty}</if>)
      * NOT_EMPTY: insert into table_a(<if test="columnProperty != null and columnProperty!=''">column</if>) values (<if test="columnProperty != null and columnProperty!=''">#{columnProperty}</if>)
+     * NEVER: 该字段不参加 insert 语句
+     * <p>
      * NOT_EMPTY 如果针对的是非 CharSequence 类型的字段则效果等于 NOT_NULL
      *
      * @since 3.1.2
@@ -85,9 +87,11 @@ public @interface TableField {
     /**
      * 字段验证策略之 update: 当更新操作时，该字段拼接set语句时的策略
      * <p>
-     * IGNORED: 直接拼接 update table_a set column=#{columnProperty}, 属性为null/空string都会被set进去
+     * ALWAYS: 直接拼接 update table_a set column=#{columnProperty}, 属性为null/空string都会被set进去
      * NOT_NULL: update table_a set <if test="columnProperty != null">column=#{columnProperty}</if>
      * NOT_EMPTY: update table_a set <if test="columnProperty != null and columnProperty!=''">column=#{columnProperty}</if>
+     * NEVER: 该字段不参加 update 语句
+     * <p>
      * NOT_EMPTY 如果针对的是非 CharSequence 类型的字段则效果等于 NOT_NULL
      *
      * @since 3.1.2
@@ -97,9 +101,11 @@ public @interface TableField {
     /**
      * 字段验证策略之 where: 表示该字段在拼接where条件时的策略
      * <p>
-     * IGNORED: 直接拼接 column=#{columnProperty}
+     * ALWAYS: 直接拼接 column=#{columnProperty}
      * NOT_NULL: <if test="columnProperty != null">column=#{columnProperty}</if>
      * NOT_EMPTY: <if test="columnProperty != null and columnProperty!=''">column=#{columnProperty}</if>
+     * NEVER: 该字段不参加 where 语句
+     * <p>
      * NOT_EMPTY 如果针对的是非 CharSequence 类型的字段则效果等于 NOT_NULL
      *
      * @since 3.1.2
@@ -131,8 +137,15 @@ public @interface TableField {
     boolean keepGlobalFormat() default false;
 
     /**
+     * {@link ResultMapping#property} and {@link ParameterMapping#property}
+     *
+     * @since 3.4.4
+     */
+    String property() default "";
+
+    /**
      * JDBC类型 (该默认值不代表会按照该值生效),
-     * 只生效与 mp 自动注入的 method,
+     * 只生效于 mp 自动注入的 method,
      * 建议配合 {@link TableName#autoResultMap()} 一起使用
      * <p>
      * {@link ResultMapping#jdbcType} and {@link ParameterMapping#jdbcType}
@@ -143,7 +156,7 @@ public @interface TableField {
 
     /**
      * 类型处理器 (该默认值不代表会按照该值生效),
-     * 只生效与 mp 自动注入的 method,
+     * 只生效于 mp 自动注入的 method,
      * 建议配合 {@link TableName#autoResultMap()} 一起使用
      * <p>
      * {@link ResultMapping#typeHandler} and {@link ParameterMapping#typeHandler}

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,6 +52,14 @@ public interface Constants extends StringPool, Serializable {
      * 实体类
      */
     String ENTITY = "et";
+
+    /**
+     * 填充实体
+     *
+     * @since 3.5.8
+     */
+    String MP_FILL_ET = "mpFillEt";
+
     /**
      * 实体类 带后缀 ==> .
      */
@@ -97,6 +105,10 @@ public interface Constants extends StringPool, Serializable {
      */
     String WRAPPER_ENTITY_DOT = WRAPPER_DOT + "entity" + DOT;
     /**
+     * wrapper 类的属性 expression 下级属性 order
+     */
+    String WRAPPER_EXPRESSION_ORDER = WRAPPER_DOT + "useAnnotationOrderBy";
+    /**
      * UpdateWrapper 类的属性 sqlSet
      */
     String U_WRAPPER_SQL_SET = WRAPPER_DOT + "sqlSet";
@@ -115,6 +127,7 @@ public interface Constants extends StringPool, Serializable {
     /**
      * columnMap
      */
+    @Deprecated
     String COLUMN_MAP = "cm";
     /**
      * columnMap.isEmpty
@@ -122,21 +135,62 @@ public interface Constants extends StringPool, Serializable {
     String COLUMN_MAP_IS_EMPTY = COLUMN_MAP + DOT + "isEmpty";
     /**
      * collection
+     *
+     * @see #COLL
+     * @deprecated 3.5.2 后面修改成collection
      */
+    @Deprecated
     String COLLECTION = "coll";
+
+    /**
+     * @since 3.5.2
+     */
+    String COLL = "coll";
+    /**
+     * list
+     *
+     * @since 3.5.0
+     */
+    String LIST = "list";
     /**
      * where
      */
     String WHERE = "WHERE";
+    /**
+     * limit
+     */
+    String LIMIT = "LIMIT";
 
+    /**
+     * @since 3.5.2
+     */
+    String ARRAY = "array";
+    /**
+     * order by
+     */
+    String ORDER_BY = "ORDER BY";
+    /**
+     * asc
+     */
+    String ASC = "ASC";
+    /**
+     * desc
+     */
+    String DESC = "DESC";
     /**
      * 乐观锁字段
      */
-    String MP_OPTLOCK_INTERCEPTOR = "oli";
     String MP_OPTLOCK_VERSION_ORIGINAL = "MP_OPTLOCK_VERSION_ORIGINAL";
-    String MP_OPTLOCK_VERSION_COLUMN = "MP_OPTLOCK_VERSION_COLUMN";
-    String MP_OPTLOCK_ET_ORIGINAL = "MP_OPTLOCK_ET_ORIGINAL";
 
+    /**
+     * wrapper 内部参数相关
+     */
     String WRAPPER_PARAM = "MPGENVAL";
-    String WRAPPER_PARAM_FORMAT = "#{%s.paramNameValuePairs.%s}";
+    String WRAPPER_PARAM_MIDDLE = ".paramNameValuePairs" + DOT;
+
+
+    /**
+     * 默认批次提交数量
+     */
+    int DEFAULT_BATCH_SIZE = 1000;
 }

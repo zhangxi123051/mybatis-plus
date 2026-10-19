@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package com.baomidou.mybatisplus.core.toolkit;
 
-import com.baomidou.mybatisplus.core.conditions.ISqlSegment;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.segments.MergeSegments;
@@ -60,6 +59,17 @@ public final class Wrappers {
      */
     public static <T> QueryWrapper<T> query(T entity) {
         return new QueryWrapper<>(entity);
+    }
+
+    /**
+     * 获取 QueryWrapper&lt;T&gt;
+     *
+     * @param entityClass 实体类class
+     * @param <T>    实体类泛型
+     * @return QueryWrapper&lt;T&gt;
+     */
+    public static <T> QueryWrapper<T> query(Class<T> entityClass) {
+        return new QueryWrapper<>(entityClass);
     }
 
     /**
@@ -212,7 +222,7 @@ public final class Wrappers {
         }
 
         @Override
-        public boolean nonEmptyOfEntity() {
+        public boolean isNonEmptyOfEntity() {
             return !isEmptyOfEntity();
         }
 
@@ -227,11 +237,6 @@ public final class Wrappers {
 
         @Override
         public EmptyWrapper<T> last(boolean condition, String lastSql) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        protected EmptyWrapper<T> doIt(boolean condition, ISqlSegment... sqlSegments) {
             throw new UnsupportedOperationException();
         }
 

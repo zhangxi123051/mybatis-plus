@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package com.baomidou.mybatisplus.core.conditions.segments;
 
 import com.baomidou.mybatisplus.core.conditions.ISqlSegment;
+import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
 
 import java.util.ArrayList;
@@ -28,7 +29,6 @@ import java.util.List;
  * @author miemie
  * @since 2018-06-27
  */
-@SuppressWarnings("serial")
 public abstract class AbstractISegmentList extends ArrayList<ISqlSegment> implements ISqlSegment, StringPool {
 
     /**
@@ -119,5 +119,17 @@ public abstract class AbstractISegmentList extends ArrayList<ISqlSegment> implem
         lastValue = null;
         sqlSegment = EMPTY;
         cacheSqlSegment = true;
+    }
+
+    public void clearSqlSegmentCache() {
+        sqlSegment = EMPTY;
+        cacheSqlSegment = false;
+    }
+
+    public void changeParamAlias(String oldParamAlias, String paramAlias) {
+        if (cacheSqlSegment) {
+            sqlSegment = sqlSegment.replace("#{" + oldParamAlias + Constants.WRAPPER_PARAM_MIDDLE,
+                "#{" + paramAlias + Constants.WRAPPER_PARAM_MIDDLE);
+        }
     }
 }

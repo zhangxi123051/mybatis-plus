@@ -1,8 +1,8 @@
 package com.baomidou.mybatisplus.test.enums;
 
-import com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler;
 import com.baomidou.mybatisplus.test.BaseDbTest;
 import org.apache.ibatis.session.Configuration;
+import org.apache.ibatis.type.EnumOrdinalTypeHandler;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author miemie
  * @since 2020-06-23
  */
-public class EnumTest extends BaseDbTest<EntityMapper> {
+class EnumTest extends BaseDbTest<EntityMapper> {
 
     @Test
     void test() {
@@ -26,7 +26,7 @@ public class EnumTest extends BaseDbTest<EntityMapper> {
             assertThat(insert).as("插入成功").isEqualTo(1);
         });
 
-        doTest(m -> {
+        doTestAutoCommit(m -> {
             Entity entity = m.selectById(id);
             assertThat(entity).as("查出刚刚插入的数据").isNotNull();
             assertThat(entity.getEnumInt()).as("枚举正确").isEqualTo(EnumInt.ONE);
@@ -35,11 +35,19 @@ public class EnumTest extends BaseDbTest<EntityMapper> {
             entity.setEnumOrdinal(EnumOrdinal.ONE);
             m.updateById(entity);
         });
+
+        doTest(m -> {
+            Entity entity = m.findById(id);
+            assertThat(entity).as("查出刚刚插入的数据").isNotNull();
+            assertThat(entity.getEnumInt()).as("枚举正确").isEqualTo(EnumInt.ONE);
+            assertThat(entity.getEnumStr()).as("枚举正确").isEqualTo(EnumStr.TWO);
+            assertThat(entity.getEnumOrdinal()).as("枚举正确").isEqualTo(EnumOrdinal.ONE);
+        });
     }
 
     @Override
     protected Consumer<Configuration> consumer() {
-        return i -> i.setDefaultEnumTypeHandler(MybatisEnumTypeHandler.class);
+        return i -> i.setDefaultEnumTypeHandler(EnumOrdinalTypeHandler.class);
     }
 
     @Override

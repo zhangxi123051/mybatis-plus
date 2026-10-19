@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,11 @@ public enum DbType {
      * ORACLE
      */
     ORACLE("oracle", "Oracle11g及以下数据库(高版本推荐使用ORACLE_NEW)"),
+    /**
+     * 云原生数据库PolarDB PostgreSQL版（兼容Oracle）<br>
+     * 由于只有该版本提供了jdbc的url,则默认该枚举识别为oracle
+     */
+    POLARDB("polardb", "PolarDB Oracle兼容数据库"),
     /**
      * oracle12c new pagination
      */
@@ -90,8 +95,21 @@ public enum DbType {
     PHOENIX("phoenix", "Phoenix HBase数据库"),
     /**
      * Gauss
+     * <p>
+     * 低版本为 zenith，为贡献者提供，非标准官方驱动，3.5.11 修改成 gauss
+     * </p>
+     *
+     * @see #GAUSS_DB
+     * @deprecated 3.5.13 使用官方标准名称
      */
-    GAUSS("zenith", "Gauss 数据库"),
+    @Deprecated
+    GAUSS("gauss", "Gauss 数据库"),
+    /**
+     * GaussDB
+     *
+     * @since 3.5.13
+     */
+    GAUSS_DB("gaussDB", "GaussDB 数据库"),
     /**
      * ClickHouse
      */
@@ -99,7 +117,37 @@ public enum DbType {
     /**
      * GBase
      */
-    GBASE("gbase", "南大通用数据库"),
+    GBASE("gbase", "南大通用(华库)数据库"),
+    /**
+     * GBase-8s
+     */
+    GBASE_8S("gbase-8s", "南大通用数据库 GBase 8s"),
+    /**
+     * use {@link #GBASE_8S}
+     *
+     * @deprecated 2022-05-30
+     */
+    @Deprecated
+    GBASEDBT("gbasedbt", "南大通用数据库"),
+    /**
+     * use {@link #GBASE_8S}
+     *
+     * @deprecated 2022-05-30
+     */
+    @Deprecated
+    GBASE_INFORMIX("gbase 8s", "南大通用数据库 GBase 8s"),
+    /**
+     * GBase8sPG
+     */
+    GBASE8S_PG("gbase8s-pg", "南大通用数据库 GBase 8s兼容pg"),
+    /**
+     * GBase8c
+     */
+    GBASE_8C("gbase8c", "南大通用数据库 GBase 8c"),
+    /**
+     * Sinodb
+     */
+    SINODB("sinodb", "星瑞格数据库"),
     /**
      * Oscar
      */
@@ -117,7 +165,91 @@ public enum DbType {
      */
     FIREBIRD("Firebird", "Firebird 数据库"),
     /**
-     * UNKONWN DB
+     * HighGo
+     */
+    HIGH_GO("highgo", "瀚高数据库"),
+    /**
+     * CUBRID
+     */
+    CUBRID("cubrid", "CUBRID数据库"),
+    /**
+     * SUNDB
+     */
+    SUNDB("sundb", "SUNDB数据库"),
+    /**
+     * Hana
+     */
+    SAP_HANA("hana", "SAP_HANA数据库"),
+    /**
+     * Impala
+     */
+    IMPALA("impala", "impala数据库"),
+    /**
+     * Vertica
+     */
+    VERTICA("vertica", "vertica数据库"),
+    /**
+     * xcloud
+     */
+    XCloud("xcloud", "行云数据库"),
+    /**
+     * redshift
+     */
+    REDSHIFT("redshift", "亚马逊redshift数据库"),
+    /**
+     * openGauss
+     */
+    OPENGAUSS("openGauss", "华为 opengauss 数据库"),
+    /**
+     * TDengine
+     */
+    TDENGINE("TDengine", "TDengine数据库"),
+    /**
+     * Informix
+     */
+    INFORMIX("informix", "Informix数据库"),
+    /**
+     * uxdb
+     */
+    UXDB("uxdb", "优炫数据库"),
+    /**
+     * lealone
+     */
+    LEALONE("lealone", "Lealone数据库"),
+    /**
+     * trino
+     */
+    TRINO("trino", "Trino数据库"),
+    /**
+     * presto
+     */
+    PRESTO("presto", "Presto数据库"),
+    /**
+     * derby
+     */
+    DERBY("derby", "Derby数据库"),
+    /**
+     * vastbase
+     */
+    VASTBASE("vastbase", "Vastbase数据库"),
+    /**
+     * goldendb
+     */
+    GOLDENDB("goldendb", "GoldenDB数据库"),
+    /**
+     * duckdb
+     */
+    DUCKDB("duckdb", "duckdb数据库"),
+    /**
+     * yasdb
+     */
+    YASDB("yasdb", "崖山数据库"),
+    /**
+     * Hadoop的数据仓库
+     */
+    HIVE2("hive2", "Hadoop数据仓库"),
+    /**
+     * UNKNOWN DB
      */
     OTHER("other", "其他数据库");
 
@@ -142,5 +274,48 @@ public enum DbType {
             }
         }
         return OTHER;
+    }
+
+    public boolean mysqlSameType() {
+        return this == DbType.MYSQL
+                || this == DbType.MARIADB
+                || this == DbType.GBASE
+                || this == DbType.OSCAR
+                || this == DbType.XU_GU
+                || this == DbType.CLICK_HOUSE
+                || this == DbType.OCEAN_BASE
+                || this == DbType.CUBRID
+                || this == DbType.SUNDB
+                || this == DbType.GOLDENDB
+                || this == DbType.YASDB;
+    }
+
+    public boolean oracleSameType() {
+        return this == DbType.ORACLE
+                || this == DbType.POLARDB
+                || this == DbType.DM
+                || this == DbType.GAUSS;
+    }
+
+    public boolean postgresqlSameType() {
+        return this == DbType.POSTGRE_SQL
+                || this == DbType.H2
+                || this == DbType.LEALONE
+                || this == DbType.SQLITE
+                || this == DbType.HSQL
+                || this == DbType.KINGBASE_ES
+                || this == DbType.PHOENIX
+                || this == DbType.SAP_HANA
+                || this == DbType.IMPALA
+                || this == DbType.HIGH_GO
+                || this == DbType.VERTICA
+                || this == DbType.REDSHIFT
+                || this == DbType.OPENGAUSS
+                || this == DbType.TDENGINE
+                || this == DbType.UXDB
+                || this == DbType.GBASE8S_PG
+                || this == DbType.GBASE_8C
+                || this == DbType.VASTBASE
+                || this == DbType.DUCKDB;
     }
 }

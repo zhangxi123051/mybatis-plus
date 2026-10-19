@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@
  */
 package com.baomidou.mybatisplus.core;
 
-import com.baomidou.mybatisplus.core.config.GlobalConfig;
-import com.baomidou.mybatisplus.core.executor.MybatisBatchExecutor;
-import com.baomidou.mybatisplus.core.executor.MybatisCachingExecutor;
-import com.baomidou.mybatisplus.core.executor.MybatisReuseExecutor;
-import com.baomidou.mybatisplus.core.executor.MybatisSimpleExecutor;
+import com.baomidou.mybatisplus.core.handlers.CompositeEnumTypeHandler;
+import com.baomidou.mybatisplus.core.mapper.Mapper;
+import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
+import com.baomidou.mybatisplus.core.toolkit.ReflectionKit;
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.ibatis.binding.MapperRegistry;
@@ -39,11 +39,14 @@ import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.transaction.Transaction;
+import org.apache.ibatis.type.TypeHandler;
 
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
+import java.util.stream.Collectors;
 
 /**
  * replace default Configuration class
@@ -76,35 +79,9 @@ public class MybatisConfiguration extends Configuration {
     @Getter
     private boolean useGeneratedShortKey = true;
 
-    /**
-     * @deprecated 该属性将会随着 com.baomidou.mybatisplus.extension.plugins.PaginationInterceptor 插件的移除而移除
-     */
-    @Deprecated
-    @Setter
-    @Getter
-    private boolean useDeprecatedExecutor = true;
-
     public MybatisConfiguration(Environment environment) {
         this();
         this.environment = environment;
-    }
-
-    /**
-     * @return GlobalConfig
-     * @deprecated 3.4.0 please use {@link GlobalConfigUtils#getGlobalConfig(Configuration)}
-     */
-    @Deprecated
-    public GlobalConfig getGlobalConfig() {
-        return GlobalConfigUtils.getGlobalConfig(this);
-    }
-
-    /**
-     * @param globalConfig GlobalConfig
-     * @deprecated 3.4.0 please use {@link GlobalConfigUtils#setGlobalConfig(Configuration, GlobalConfig)}
-     */
-    @Deprecated
-    public void setGlobalConfig(GlobalConfig globalConfig) {
-        GlobalConfigUtils.setGlobalConfig(this, globalConfig);
     }
 
     /**
@@ -113,6 +90,7 @@ public class MybatisConfiguration extends Configuration {
     public MybatisConfiguration() {
         super();
         this.mapUnderscoreToCamelCase = true;
+        typeHandlerRegistry.setDefaultEnumTypeHandler(CompositeEnumTypeHandler.class);
         languageRegistry.setDefaultDriverClass(MybatisXMLLanguageDriver.class);
     }
 
@@ -125,7 +103,6 @@ public class MybatisConfiguration extends Configuration {
      */
     @Override
     public void addMappedStatement(MappedStatement ms) {
-        logger.debug("addMappedStatement: " + ms.getId());
         if (mappedStatements.containsKey(ms.getId())) {
             /*
              * 说明已加载了xml中的节点； 忽略mapper中的 SqlProvider 数据
@@ -150,6 +127,50 @@ public class MybatisConfiguration extends Configuration {
     @Override
     public <T> void addMapper(Class<T> type) {
         mybatisMapperRegistry.addMapper(type);
+    }
+
+    /**
+     * 新增注入新的 Mapper 信息，新增前会清理之前的缓存信息
+     *
+     * @param type Mapper Type
+     * @deprecated 3.5.8 不建议在实际生产环境中使用.
+     */
+    @Deprecated
+    public <T> void addNewMapper(Class<T> type) {
+        this.removeMapper(type);
+        this.addMapper(type);
+    }
+
+    /**
+     * 移除 Mapper 相关缓存，支持 GroovyClassLoader 动态注入 Mapper
+     *
+     * @param type Mapper Type
+     * @deprecated 3.5.8 不建议在实际生产环境中使用.
+     */
+    @Deprecated
+    public <T> void removeMapper(Class<T> type) {
+        Set<String> mapperRegistryCache = GlobalConfigUtils.getGlobalConfig(this).getMapperRegistryCache();
+        final String mapperType = type.toString();
+        if (mapperRegistryCache.contains(mapperType)) {
+            // 清空实体表信息映射信息
+            TableInfoHelper.remove(ReflectionKit.getSuperClassGenericType(type, Mapper.class, 0));
+
+            // 清空 Mapper 缓存信息
+            this.mybatisMapperRegistry.removeMapper(type);
+            this.loadedResources.remove(type.toString());
+            this.loadedResources.remove(type.getName().replace(StringPool.DOT, StringPool.SLASH) + ".xml");
+            mapperRegistryCache.remove(mapperType);
+
+            // 清空 Mapper 方法 mappedStatement 缓存信息
+            String typeKey = type.getName() + StringPool.DOT;
+            String simpleName = type.getSimpleName();
+            mappedStatements.keySet().stream().filter(ms -> ms.startsWith(typeKey) || ms.equals(simpleName)).collect(Collectors.toSet()).forEach(mappedStatements::remove);
+            resultMaps.keySet().stream().filter(r -> r.startsWith(typeKey)).collect(Collectors.toSet()).forEach(resultMaps::remove);
+            parameterMaps.keySet().stream().filter(p -> p.startsWith(typeKey)).collect(Collectors.toSet()).forEach(parameterMaps::remove);
+            keyGenerators.keySet().stream().filter(k -> k.startsWith(typeKey)).collect(Collectors.toSet()).forEach(keyGenerators::remove);
+            sqlFragments.keySet().stream().filter(s -> s.startsWith(typeKey)).collect(Collectors.toSet()).forEach(sqlFragments::remove);
+            caches.keySet().stream().filter(p -> p.equals(type.getName()) || p.equals(simpleName)).collect(Collectors.toSet()).forEach(caches::remove);
+        }
     }
 
     /**
@@ -192,10 +213,16 @@ public class MybatisConfiguration extends Configuration {
     @Override
     public void setDefaultScriptingLanguage(Class<? extends LanguageDriver> driver) {
         if (driver == null) {
-            //todo 替换动态SQL生成的默认语言为自己的。
             driver = MybatisXMLLanguageDriver.class;
         }
         getLanguageRegistry().setDefaultDriverClass(driver);
+    }
+
+    @Override
+    public void setDefaultEnumTypeHandler(Class<? extends TypeHandler> typeHandler) {
+        if (typeHandler != null) {
+            CompositeEnumTypeHandler.setDefaultEnumTypeHandler(typeHandler);
+        }
     }
 
     @Override
@@ -340,37 +367,21 @@ public class MybatisConfiguration extends Configuration {
 
     @Override
     public Executor newExecutor(Transaction transaction, ExecutorType executorType) {
-        if (useDeprecatedExecutor) {
-            executorType = executorType == null ? defaultExecutorType : executorType;
-            executorType = executorType == null ? ExecutorType.SIMPLE : executorType;
-            Executor executor;
-            if (ExecutorType.BATCH == executorType) {
-                executor = new MybatisBatchExecutor(this, transaction);
-            } else if (ExecutorType.REUSE == executorType) {
-                executor = new MybatisReuseExecutor(this, transaction);
-            } else {
-                executor = new MybatisSimpleExecutor(this, transaction);
-            }
-            if (cacheEnabled) {
-                executor = new MybatisCachingExecutor(executor);
-            }
-            executor = (Executor) interceptorChain.pluginAll(executor);
-            return executor;
-        }
         return super.newExecutor(transaction, executorType);
     }
 
     // Slow but a one time cost. A better solution is welcome.
     @Override
-    protected void checkGloballyForDiscriminatedNestedResultMaps(ResultMap rm) {
+    public void checkGloballyForDiscriminatedNestedResultMaps(ResultMap rm) {
         if (rm.hasNestedResultMaps()) {
-            for (Map.Entry<String, ResultMap> entry : resultMaps.entrySet()) {
-                Object value = entry.getValue();
-                if (value instanceof ResultMap) {
-                    ResultMap entryResultMap = (ResultMap) value;
+            final String resultMapId = rm.getId();
+            for (Object resultMapObject : resultMaps.values()) {
+                if (resultMapObject instanceof ResultMap) {
+                    ResultMap entryResultMap = (ResultMap) resultMapObject;
                     if (!entryResultMap.hasNestedResultMaps() && entryResultMap.getDiscriminator() != null) {
-                        Collection<String> discriminatedResultMapNames = entryResultMap.getDiscriminator().getDiscriminatorMap().values();
-                        if (discriminatedResultMapNames.contains(rm.getId())) {
+                        Collection<String> discriminatedResultMapNames = entryResultMap.getDiscriminator().getDiscriminatorMap()
+                            .values();
+                        if (discriminatedResultMapNames.contains(resultMapId)) {
                             entryResultMap.forceNestedResultMaps();
                         }
                     }
@@ -383,8 +394,7 @@ public class MybatisConfiguration extends Configuration {
     @Override
     protected void checkLocallyForDiscriminatedNestedResultMaps(ResultMap rm) {
         if (!rm.hasNestedResultMaps() && rm.getDiscriminator() != null) {
-            for (Map.Entry<String, String> entry : rm.getDiscriminator().getDiscriminatorMap().entrySet()) {
-                String discriminatedResultMapName = entry.getValue();
+            for (String discriminatedResultMapName : rm.getDiscriminator().getDiscriminatorMap().values()) {
                 if (hasResultMap(discriminatedResultMapName)) {
                     ResultMap discriminatedResultMap = resultMaps.get(discriminatedResultMapName);
                     if (discriminatedResultMap.hasNestedResultMaps()) {
@@ -396,14 +406,30 @@ public class MybatisConfiguration extends Configuration {
         }
     }
 
-    protected class StrictMap<V> extends HashMap<String, V> {
+    protected class StrictMap<V> extends ConcurrentHashMap<String, V> {
 
         private static final long serialVersionUID = -4950446264854982944L;
         private final String name;
         private BiFunction<V, V, String> conflictMessageProducer;
+        private final Object AMBIGUITY_INSTANCE = new Object();
+
+        public StrictMap(String name, int initialCapacity, float loadFactor) {
+            super(initialCapacity, loadFactor);
+            this.name = name;
+        }
+
+        public StrictMap(String name, int initialCapacity) {
+            super(initialCapacity);
+            this.name = name;
+        }
 
         public StrictMap(String name) {
             super();
+            this.name = name;
+        }
+
+        public StrictMap(String name, Map<String, ? extends V> m) {
+            super(m);
             this.name = name;
         }
 
@@ -426,19 +452,27 @@ public class MybatisConfiguration extends Configuration {
         public V put(String key, V value) {
             if (containsKey(key)) {
                 throw new IllegalArgumentException(name + " already contains value for " + key
-                    + (conflictMessageProducer == null ? "" : conflictMessageProducer.apply(super.get(key), value)));
+                    + (conflictMessageProducer == null ? StringPool.EMPTY : conflictMessageProducer.apply(super.get(key), value)));
             }
             if (useGeneratedShortKey) {
-                if (key.contains(".")) {
+                if (key.contains(StringPool.DOT)) {
                     final String shortKey = getShortName(key);
                     if (super.get(shortKey) == null) {
                         super.put(shortKey, value);
                     } else {
-                        super.put(shortKey, (V) new StrictMap.Ambiguity(shortKey));
+                        super.put(shortKey, (V) AMBIGUITY_INSTANCE);
                     }
                 }
             }
             return super.put(key, value);
+        }
+
+        @Override
+        public boolean containsKey(Object key) {
+            if (key == null) {
+                return false;
+            }
+            return super.get(key) != null;
         }
 
         @Override
@@ -447,23 +481,11 @@ public class MybatisConfiguration extends Configuration {
             if (value == null) {
                 throw new IllegalArgumentException(name + " does not contain value for " + key);
             }
-            if (useGeneratedShortKey && value instanceof StrictMap.Ambiguity) {
-                throw new IllegalArgumentException(((StrictMap.Ambiguity) value).getSubject() + " is ambiguous in " + name
+            if (useGeneratedShortKey && AMBIGUITY_INSTANCE == value) {
+                throw new IllegalArgumentException(key + " is ambiguous in " + name
                     + " (try using the full name including the namespace, or rename one of the entries)");
             }
             return value;
-        }
-
-        protected class Ambiguity {
-            private final String subject;
-
-            public Ambiguity(String subject) {
-                this.subject = subject;
-            }
-
-            public String getSubject() {
-                return subject;
-            }
         }
 
         private String getShortName(String key) {

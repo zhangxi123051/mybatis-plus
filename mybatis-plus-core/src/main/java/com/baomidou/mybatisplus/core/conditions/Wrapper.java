@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,10 @@ import com.baomidou.mybatisplus.core.conditions.segments.NormalSegmentList;
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.baomidou.mybatisplus.core.toolkit.*;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
+import com.baomidou.mybatisplus.core.toolkit.Constants;
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 
 import java.util.Objects;
 
@@ -70,7 +73,7 @@ public abstract class Wrapper<T> implements ISqlSegment {
      * 1. 逻辑删除需要自己拼接条件 (之前自定义也同样)
      * 2. 不支持wrapper中附带实体的情况 (wrapper自带实体会更麻烦)
      * 3. 用法 ${ew.customSqlSegment} (不需要where标签包裹,切记!)
-     * 4. ew是wrapper定义别名,不能使用其他的替换
+     * 4. ew是wrapper定义的默认别名,可通过{@link org.apache.ibatis.annotations.Param}注解修改，也可以通过{@link AbstractWrapper#setParamAlias(String)}方式设置别名
      */
     public String getCustomSqlSegment() {
         MergeSegments expression = getExpression();
@@ -98,8 +101,13 @@ public abstract class Wrapper<T> implements ISqlSegment {
     /**
      * 查询条件不为空(包含entity)
      */
-    public boolean nonEmptyOfWhere() {
+    public boolean isNonEmptyOfWhere() {
         return !isEmptyOfWhere();
+    }
+
+    @Deprecated
+    public boolean nonEmptyOfWhere() {
+        return isNonEmptyOfWhere();
     }
 
     /**
@@ -112,8 +120,13 @@ public abstract class Wrapper<T> implements ISqlSegment {
     /**
      * 查询条件为空(不包含entity)
      */
-    public boolean nonEmptyOfNormal() {
+    public boolean isNonEmptyOfNormal() {
         return !isEmptyOfNormal();
+    }
+
+    @Deprecated
+    public boolean nonEmptyOfNormal() {
+        return isNonEmptyOfNormal();
     }
 
     /**
@@ -121,7 +134,7 @@ public abstract class Wrapper<T> implements ISqlSegment {
      *
      * @return true 不为空
      */
-    public boolean nonEmptyOfEntity() {
+    public boolean isNonEmptyOfEntity() {
         T entity = getEntity();
         if (entity == null) {
             return false;
@@ -130,27 +143,32 @@ public abstract class Wrapper<T> implements ISqlSegment {
         if (tableInfo == null) {
             return false;
         }
-        if (tableInfo.getFieldList().stream().anyMatch(e -> fieldStrategyMatch(entity, e))) {
+        if (tableInfo.getFieldList().stream().anyMatch(e -> fieldStrategyMatch(tableInfo, entity, e))) {
             return true;
         }
-        return StringUtils.isNotBlank(tableInfo.getKeyProperty()) ? Objects.nonNull(ReflectionKit.getFieldValue(entity, tableInfo.getKeyProperty())) : false;
+        return StringUtils.isNotBlank(tableInfo.getKeyProperty()) ? Objects.nonNull(tableInfo.getPropertyValue(entity, tableInfo.getKeyProperty())) : false;
+    }
+
+    @Deprecated
+    public boolean nonEmptyOfEntity() {
+        return isNonEmptyOfEntity();
     }
 
     /**
      * 根据实体FieldStrategy属性来决定判断逻辑
      */
-    private boolean fieldStrategyMatch(T entity, TableFieldInfo e) {
+    private boolean fieldStrategyMatch(TableInfo tableInfo, T entity, TableFieldInfo e) {
         switch (e.getWhereStrategy()) {
             case NOT_NULL:
-                return Objects.nonNull(ReflectionKit.getFieldValue(entity, e.getProperty()));
-            case IGNORED:
+                return Objects.nonNull(tableInfo.getPropertyValue(entity, e.getProperty()));
+            case ALWAYS:
                 return true;
             case NOT_EMPTY:
-                return StringUtils.checkValNotNull(ReflectionKit.getFieldValue(entity, e.getProperty()));
+                return StringUtils.checkValNotNull(tableInfo.getPropertyValue(entity, e.getProperty()));
             case NEVER:
                 return false;
             default:
-                return Objects.nonNull(ReflectionKit.getFieldValue(entity, e.getProperty()));
+                return Objects.nonNull(tableInfo.getPropertyValue(entity, e.getProperty()));
         }
     }
 
@@ -160,7 +178,7 @@ public abstract class Wrapper<T> implements ISqlSegment {
      * @return true 为空
      */
     public boolean isEmptyOfEntity() {
-        return !nonEmptyOfEntity();
+        return !isNonEmptyOfEntity();
     }
 
     /**

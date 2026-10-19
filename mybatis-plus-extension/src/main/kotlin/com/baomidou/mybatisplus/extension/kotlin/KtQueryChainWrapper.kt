@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,17 +21,17 @@ import com.baomidou.mybatisplus.core.metadata.TableFieldInfo
 import com.baomidou.mybatisplus.extension.conditions.AbstractChainWrapper
 import com.baomidou.mybatisplus.extension.conditions.query.ChainQuery
 import java.util.function.Predicate
-import kotlin.reflect.KProperty
+import kotlin.reflect.KProperty1
 
 /**
  * @author FlyInWind
  * @since 2020-10-18
  */
-class KtQueryChainWrapper<T : Any>(
-    internal val baseMapper: BaseMapper<T>
-) : AbstractChainWrapper<T, KProperty<*>, KtQueryChainWrapper<T>, KtQueryWrapper<T>>(),
-    ChainQuery<T>, Query<KtQueryChainWrapper<T>, T, KProperty<*>> {
-
+@Suppress("serial")
+open class KtQueryChainWrapper<T : Any>(
+    internal val baseMapper: BaseMapper<T>?
+) : AbstractChainWrapper<T, KProperty1<in T, *>, KtQueryChainWrapper<T>, KtQueryWrapper<T>>(),
+    ChainQuery<T>, Query<KtQueryChainWrapper<T>, T, KProperty1<in T, *>> {
 
     constructor(baseMapper: BaseMapper<T>, entityClass: Class<T>) : this(baseMapper) {
         super.wrapperChildren = KtQueryWrapper(entityClass)
@@ -41,9 +41,22 @@ class KtQueryChainWrapper<T : Any>(
         super.wrapperChildren = KtQueryWrapper(entity)
     }
 
-    override fun select(vararg columns: KProperty<*>): KtQueryChainWrapper<T> {
-        wrapperChildren.select(*columns)
+    constructor(entityClass: Class<T>) : this(null) {
+        super.wrapperChildren = KtQueryWrapper(entityClass)
+    }
+
+    constructor(entity: T) : this(null) {
+        super.wrapperChildren = KtQueryWrapper(entity)
+        super.setEntityClass(entity.javaClass)
+    }
+
+    override fun select(condition: Boolean, columns: MutableList<KProperty1<in T, *>>): KtQueryChainWrapper<T> {
+        wrapperChildren.select(condition, columns)
         return typedThis
+    }
+
+    override fun select(predicate: Predicate<TableFieldInfo>): KtQueryChainWrapper<T> {
+        return select(entityClass, predicate)
     }
 
     override fun select(entityClass: Class<T>, predicate: Predicate<TableFieldInfo>): KtQueryChainWrapper<T> {
@@ -51,8 +64,11 @@ class KtQueryChainWrapper<T : Any>(
         return typedThis
     }
 
-    override fun getBaseMapper(): BaseMapper<T> {
+    override fun getBaseMapper(): BaseMapper<T>? {
         return baseMapper
     }
 
+    override fun getEntityClass(): Class<T> {
+        return super.wrapperChildren.entityClass
+    }
 }

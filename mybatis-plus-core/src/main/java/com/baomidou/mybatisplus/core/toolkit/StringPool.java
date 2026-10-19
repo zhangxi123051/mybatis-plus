@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ package com.baomidou.mybatisplus.core.toolkit;
  * they will be inlined by java compiler and
  * reference to this class will be dropped.
  * There is <b>no</b> performance gain of using this pool.
- * Read: https://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.5
+ * Read: <a href="https://java.sun.com/docs/books/jls/third_edition/html/lexical.html#3.10.5">Java SE Specifications</a>
  * <ul>
  * <li>Literal strings within the same class in the same package represent references to the same <code>String</code> object.</li>
  * <li>Literal strings within different classes in the same package represent references to the same <code>String</code> object.</li>
@@ -64,6 +64,7 @@ public interface StringPool {
     String N = "n";
     String NO = "no";
     String NULL = "null";
+    String NUM = "NUM";
     String OFF = "off";
     String ON = "on";
     String PERCENT = "%";
@@ -81,6 +82,7 @@ public interface StringPool {
     String SINGLE_QUOTE = "'";
     String BACKTICK = "`";
     String SPACE = " ";
+    String SQL = "sql";
     String TILDA = "~";
     String LEFT_SQ_BRACKET = "[";
     String RIGHT_SQ_BRACKET = "]";
@@ -108,4 +110,7 @@ public interface StringPool {
     String[] EMPTY_ARRAY = new String[0];
 
     byte[] BYTES_NEW_LINE = StringPool.NEWLINE.getBytes();
+
+    // SQL method
+    String SELECT_WITH_CURSOR = "selectWithCursor";
 }

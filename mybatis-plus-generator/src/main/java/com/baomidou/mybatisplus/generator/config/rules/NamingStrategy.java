@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.generator.config.ConstVal;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -30,15 +29,22 @@ import java.util.Set;
  * @since 2016/8/30
  */
 public enum NamingStrategy {
+
     /**
      * 不做任何改变，原样输出
      */
     no_change,
+
     /**
      * 下划线转驼峰命名
      */
     underline_to_camel;
 
+    /**
+     * 下划线转驼峰
+     *
+     * @param name 待转内容
+     */
     public static String underlineToCamel(String name) {
         // 快速检查
         if (StringUtils.isBlank(name)) {
@@ -57,8 +63,8 @@ public enum NamingStrategy {
         // 处理真正的驼峰片段
         Arrays.stream(camels).filter(camel -> !StringUtils.isBlank(camel)).forEach(camel -> {
             if (result.length() == 0) {
-                // 第一个驼峰片段，全部字母都小写
-                result.append(camel.toLowerCase());
+                // 第一个驼峰片段，首字母都小写
+                result.append(StringUtils.firstToLowerCase(camel));
             } else {
                 // 其他的驼峰片段，首字母大写
                 result.append(capitalFirst(camel));
@@ -70,64 +76,56 @@ public enum NamingStrategy {
     /**
      * 去掉指定的前缀
      *
-     * @param name   ignore
-     * @param prefix ignore
-     * @return ignore
-     * @see #removePrefix(String, Set)
-     * @deprecated 3.4.1
+     * @param name   表名
+     * @param prefix 前缀
+     * @return 转换后的字符串
      */
-    @Deprecated
-    public static String removePrefix(String name, String... prefix) {
-        Set<String> set = new HashSet<>(Arrays.asList(prefix));
-        return removePrefix(name, set);
-    }
-
     public static String removePrefix(String name, Set<String> prefix) {
         if (StringUtils.isBlank(name)) {
             return StringPool.EMPTY;
         }
-        if (null != prefix) {
-            // 判断是否有匹配的前缀，然后截取前缀
-            // 删除前缀
-            return prefix.stream().filter(pf -> name.toLowerCase()
-                .matches(StringPool.HAT + pf.toLowerCase() + ".*"))
-                .findFirst().map(pf -> name.substring(pf.length())).orElse(name);
-        }
-        return name;
+        // 判断是否有匹配的前缀，然后截取前缀
+        return prefix.stream().filter(pf -> name.toLowerCase().startsWith(pf.toLowerCase()))
+            .findFirst().map(pf -> name.substring(pf.length())).orElse(name);
     }
 
     /**
-     * 判断是否包含prefix
+     * 去掉下划线前缀并转成驼峰格式
      *
-     * @param name   ignore
-     * @param prefix ignore
-     * @return ignore
+     * @param name   表名
+     * @param prefix 前缀
+     * @return 转换后的字符串
      */
-    public static boolean isPrefixContained(String name, String... prefix) {
-        if (null == prefix || StringUtils.isBlank(name)) {
-            return false;
-        }
-        return Arrays.stream(prefix).anyMatch(pf -> name.toLowerCase().matches(StringPool.HAT + pf.toLowerCase() + ".*"));
+    public static String removePrefixAndCamel(String name, Set<String> prefix) {
+        return underlineToCamel(removePrefix(name, prefix));
     }
 
     /**
-     * 去掉下划线前缀且将后半部分转成驼峰格式
+     * 去掉指定的后缀
      *
-     * @param name        ignore
-     * @param tablePrefix ignore
-     * @return ignore
-     * @see #removePrefix(String, Set)
-     * @deprecated 3.4.1
+     * @param name   表名
+     * @param suffix 后缀
+     * @return 转换后的字符串
      */
-    @Deprecated
-    public static String removePrefixAndCamel(String name, String[] tablePrefix) {
-        return underlineToCamel(removePrefix(name, tablePrefix));
+    public static String removeSuffix(String name, Set<String> suffix) {
+        if (StringUtils.isBlank(name)) {
+            return StringPool.EMPTY;
+        }
+        // 判断是否有匹配的后缀，然后截取后缀
+        return suffix.stream().filter(sf -> name.toLowerCase().endsWith(sf.toLowerCase()))
+            .findFirst().map(sf -> name.substring(0, name.length() - sf.length())).orElse(name);
     }
 
-    public static String removePrefixAndCamel(String name, Set<String> tablePrefix) {
-        return underlineToCamel(removePrefix(name, tablePrefix));
+    /**
+     * 去掉下划线后缀并转成驼峰格式
+     *
+     * @param name   表名
+     * @param suffix 后缀
+     * @return 转换后的字符串
+     */
+    public static String removeSuffixAndCamel(String name, Set<String> suffix) {
+        return underlineToCamel(removeSuffix(name, suffix));
     }
-
 
     /**
      * 实体首字母大写
@@ -141,5 +139,4 @@ public enum NamingStrategy {
         }
         return StringPool.EMPTY;
     }
-
 }

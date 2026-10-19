@@ -1,18 +1,3 @@
-/*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * https://www.apache.org/licenses/LICENSE-2.0
- * <p>
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
- */
 package com.baomidou.mybatisplus.test.toolkit;
 
 
@@ -485,6 +470,57 @@ public class TableNameParserTest {
         //TODO 暂时解决不能使用的问题,当碰到for update nowait这样的,后面的 nowait 会被当做成表但也不是很影响苗老板的动态表过滤.
         assertThat(new TableNameParser("select * from mp where id = 1 for update").tables()).isEqualTo(asSet("mp"));
     }
+
+    @Test
+    public void testOnDuplicateKeyUpdate () {
+        String sql = "INSERT INTO cf_procedure (_id,password) VALUES ('1','password') ON DUPLICATE KEY UPDATE id = 'UpId', password = 'upPassword';";
+        assertThat(new TableNameParser(sql).tables()).isEqualTo(asSet("cf_procedure"));
+    }
+
+    @Test
+    public void testUpdateIgnore() {
+        String sql = "update ignore student set name = 'abc' where id = 4";
+        assertThat(new TableNameParser(sql).tables()).isEqualTo(asSet("student"));
+
+        sql = "UPDATE IGNORE student set name = 'abc' where id = 4";
+        assertThat(new TableNameParser(sql).tables()).isEqualTo(asSet("student"));
+    }
+
+    @Test
+    public void testInsertIgnore() {
+        String sql = "INSERT IGNORE INTO student (userid,username) VALUES (2,'swan'),(4,'bear') ;";
+        assertThat(new TableNameParser(sql).tables()).isEqualTo(asSet("student"));
+    }
+
+    @Test
+    void testCreateTableIfNotExists() {
+        var sql = """
+            CREATE TABLE IF NOT EXISTS `user_info` (
+                `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                `username` VARCHAR(50) NOT NULL UNIQUE,
+                `email` VARCHAR(100) NOT NULL UNIQUE,
+                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+            """;
+        assertThat(new TableNameParser(sql).tables()).isEqualTo(asSet("`user_info`"));
+    }
+
+    @Test
+    void testCreateUniqueIndex() {
+        var sql = "CREATE UNIQUE INDEX index_name ON table1 (a, b)";
+        assertThat(new TableNameParser(sql).tables()).isEqualTo(asSet("table1"));
+        sql = "ALTER TABLE table1 ADD UNIQUE INDEX `a`(`a`)";
+        assertThat(new TableNameParser(sql).tables()).isEqualTo(asSet("table1"));
+    }
+
+    @Test
+    void testCreateFullTextIndex(){
+        var sql = "CREATE FULLTEXT INDEX index_name ON table1 (a, b)";
+        assertThat(new TableNameParser(sql).tables()).isEqualTo(asSet("table1"));
+        sql = "ALTER TABLE table1 ADD FULLTEXT INDEX `a`(`a`)";
+        assertThat(new TableNameParser(sql).tables()).isEqualTo(asSet("table1"));
+    }
+
 
     private static Collection<String> asSet(String... a) {
         Set<String> result = new HashSet<>();

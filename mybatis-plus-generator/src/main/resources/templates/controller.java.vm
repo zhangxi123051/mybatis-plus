@@ -1,8 +1,6 @@
 package ${package.Controller};
 
-
 import org.springframework.web.bind.annotation.RequestMapping;
-
 #if(${restControllerStyle})
 import org.springframework.web.bind.annotation.RestController;
 #else
@@ -28,7 +26,6 @@ import ${superControllerClassPackage};
 @RequestMapping("#if(${package.ModuleName})/${package.ModuleName}#end/#if(${controllerMappingHyphenStyle})${controllerMappingHyphen}#else${table.entityPath}#end")
 #if(${kotlin})
 class ${table.controllerName}#if(${superControllerClass}) : ${superControllerClass}()#end
-
 #else
 #if(${superControllerClass})
 public class ${table.controllerName} extends ${superControllerClass} {
@@ -37,5 +34,4 @@ public class ${table.controllerName} {
 #end
 
 }
-
 #end

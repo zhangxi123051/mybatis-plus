@@ -16,6 +16,12 @@ html
 **/.settings/
 **/bin/
 
+# VS Code
+.vscode/
+
+# Zed
+.zed/
+
 # gradle
 .gradle
 **/build
@@ -26,3 +32,7 @@ html
 gradle/
 gradlew
 gradlew.bat
+
+# kotlin
+.kotlin
+/mybatis-plus-extension/test.db

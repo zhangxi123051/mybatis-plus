@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,13 +25,13 @@ public class DB2Query extends AbstractDbQuery {
 
     @Override
     public String tablesSql() {
-        return "SELECT * FROM SYSCAT.TABLES where tabschema=%s";
+        return "SELECT * FROM SYSCAT.TABLES where tabschema='%s'";
     }
 
 
     @Override
     public String tableFieldsSql() {
-        return "SELECT * FROM syscat.columns WHERE tabschema=%s AND tabname='%s'";
+        return "SELECT * FROM syscat.columns WHERE tabschema='%s' AND tabname='%s'";
     }
 
 

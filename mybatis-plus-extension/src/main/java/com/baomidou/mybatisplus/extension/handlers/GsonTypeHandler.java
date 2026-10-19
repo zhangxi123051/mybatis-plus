@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,11 @@ package com.baomidou.mybatisplus.extension.handlers;
 
 import com.baomidou.mybatisplus.core.toolkit.Assert;
 import com.google.gson.Gson;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.MappedJdbcTypes;
 import org.apache.ibatis.type.MappedTypes;
+
+import java.lang.reflect.Field;
 
 /**
  * Gson 实现 JSON 字段类型处理器
@@ -28,33 +29,46 @@ import org.apache.ibatis.type.MappedTypes;
  * @author hubin
  * @since 2019-08-25
  */
-@Slf4j
 @MappedTypes({Object.class})
 @MappedJdbcTypes(JdbcType.VARCHAR)
 public class GsonTypeHandler extends AbstractJsonTypeHandler<Object> {
-    private static Gson gson = new Gson();
-    private final Class<?> type;
+
+    private static Gson GSON;
 
     public GsonTypeHandler(Class<?> type) {
-        if (log.isTraceEnabled()) {
-            log.trace("GsonTypeHandler(" + type + ")");
-        }
-        Assert.notNull(type, "Type argument cannot be null");
-        this.type = type;
+        super(type);
+    }
+
+    public GsonTypeHandler(Class<?> type, Field field) {
+        super(type, field);
     }
 
     @Override
-    protected Object parse(String json) {
-        return gson.fromJson(json, type);
+    public Object parse(String json) {
+        return getGson().fromJson(json, this.getFieldType());
     }
 
     @Override
-    protected String toJson(Object obj) {
-        return gson.toJson(obj);
+    public String toJson(Object obj) {
+        return getGson().toJson(obj);
+    }
+
+    public static Gson getGson() {
+        return GSON == null ? Instance.GSON  : GSON;
     }
 
     public static void setGson(Gson gson) {
         Assert.notNull(gson, "Gson should not be null");
-        GsonTypeHandler.gson = gson;
+        GsonTypeHandler.GSON = gson;
     }
+
+    /**
+     * @since 3.5.15
+     */
+    private static class Instance {
+
+         private static final Gson GSON = new Gson();
+
+    }
+
 }

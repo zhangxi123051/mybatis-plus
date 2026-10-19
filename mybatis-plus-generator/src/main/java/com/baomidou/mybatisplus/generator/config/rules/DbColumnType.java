@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,7 @@ public enum DbColumnType implements IColumnType {
     INSTANT("Instant", "java.time.Instant"),
 
     // 其他杂类
+    MAP("Map", "java.util.Map"),
     BYTE_ARRAY("byte[]", null),
     OBJECT("Object", null),
     DATE("Date", "java.util.Date"),

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,9 @@ import org.beetl.core.Configuration;
 import org.beetl.core.GroupTemplate;
 import org.beetl.core.Template;
 import org.beetl.core.resource.ClasspathResourceLoader;
+import org.jetbrains.annotations.NotNull;
 
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -52,29 +54,35 @@ public class BeetlTemplateEngine extends AbstractTemplateEngine {
     private GroupTemplate groupTemplate;
 
     @Override
-    public AbstractTemplateEngine init(ConfigBuilder configBuilder) {
-        super.init(configBuilder);
+    public @NotNull AbstractTemplateEngine init(@NotNull ConfigBuilder configBuilder) {
         try {
             Configuration cfg = Configuration.defaultConfiguration();
             groupTemplate = new GroupTemplate(new ClasspathResourceLoader("/"), cfg);
         } catch (IOException e) {
-            logger.error(e.getMessage(), e);
+            throw new RuntimeException(e);
         }
         return this;
     }
 
     @Override
-    public void writer(Map<String, Object> objectMap, String templatePath, String outputFile) throws Exception {
+    public String writer(@NotNull Map<String, Object> objectMap, @NotNull String templateName, @NotNull String templateString) throws Exception {
+        Template template = groupTemplate.getTemplate(templateString);
+        template.binding(objectMap);
+        return template.render();
+    }
+
+    @Override
+    public void writer(@NotNull Map<String, Object> objectMap, @NotNull String templatePath, @NotNull File outputFile) throws Exception {
         Template template = (Template) method.invoke(groupTemplate, templatePath);
         try (FileOutputStream fileOutputStream = new FileOutputStream(outputFile)) {
             template.binding(objectMap);
             template.renderTo(fileOutputStream);
         }
-        logger.debug("模板:" + templatePath + ";  文件:" + outputFile);
+        LOGGER.debug("模板:{};  文件:{}", templatePath, outputFile);
     }
 
     @Override
-    public String templateFilePath(String filePath) {
+    public @NotNull String templateFilePath(@NotNull String filePath) {
         return filePath + ".btl";
     }
 }

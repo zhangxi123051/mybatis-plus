@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 package com.baomidou.mybatisplus.generator.keywords;
 
 import com.baomidou.mybatisplus.generator.config.IKeyWordsHandler;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 /**
  * 基类关键字处理
@@ -27,19 +27,25 @@ import java.util.Locale;
  * @since 3.3.2
  */
 public abstract class BaseKeyWordsHandler implements IKeyWordsHandler {
-    
-    public List<String> keyWords;
-    
-    public BaseKeyWordsHandler(List<String> keyWords) {
+
+    public final Set<String> keyWords;
+
+    public BaseKeyWordsHandler(@NotNull List<String> keyWords) {
+        this.keyWords = new HashSet<>(keyWords);
+    }
+
+    public BaseKeyWordsHandler(@NotNull Set<String> keyWords) {
         this.keyWords = keyWords;
     }
-    
+
     @Override
-    public List<String> getKeyWords() {
+    public @NotNull Collection<String> getKeyWords() {
         return keyWords;
     }
-    
-    public boolean isKeyWords(String columnName) {
+
+    @Override
+    public boolean isKeyWords(@NotNull String columnName) {
         return getKeyWords().contains(columnName.toUpperCase(Locale.ENGLISH));
     }
+
 }

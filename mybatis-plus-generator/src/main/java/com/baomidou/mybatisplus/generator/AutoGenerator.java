@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,30 +15,17 @@
  */
 package com.baomidou.mybatisplus.generator;
 
-import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
-import com.baomidou.mybatisplus.annotation.TableName;
-import com.baomidou.mybatisplus.annotation.Version;
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.baomidou.mybatisplus.extension.activerecord.Model;
 import com.baomidou.mybatisplus.generator.config.*;
 import com.baomidou.mybatisplus.generator.config.builder.ConfigBuilder;
-import com.baomidou.mybatisplus.generator.config.po.TableField;
 import com.baomidou.mybatisplus.generator.config.po.TableInfo;
 import com.baomidou.mybatisplus.generator.engine.AbstractTemplateEngine;
 import com.baomidou.mybatisplus.generator.engine.VelocityTemplateEngine;
-import lombok.AccessLevel;
-import lombok.Data;
 import lombok.Getter;
-import lombok.Setter;
-import lombok.experimental.Accessors;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 生成文件
@@ -46,9 +33,9 @@ import java.util.stream.Collectors;
  * @author YangHu, tangguo, hubin
  * @since 2016-08-30
  */
-@Data
-@Accessors(chain = true)
+@Getter
 public class AutoGenerator {
+
     private static final Logger logger = LoggerFactory.getLogger(AutoGenerator.class);
 
     /**
@@ -58,9 +45,7 @@ public class AutoGenerator {
     /**
      * 注入配置
      */
-    @Getter(AccessLevel.NONE)
-    @Setter(AccessLevel.NONE)
-    protected InjectionConfig injectionConfig;
+    protected InjectionConfig injection;
     /**
      * 数据源配置
      */
@@ -75,36 +60,130 @@ public class AutoGenerator {
     private PackageConfig packageInfo;
     /**
      * 模板 相关配置
+     * @deprecated 3.5.6 {@link #strategy}
      */
+    @Deprecated
     private TemplateConfig template;
     /**
      * 全局 相关配置
      */
     private GlobalConfig globalConfig;
+
+    private AutoGenerator() {
+        // 不推荐使用
+    }
+
     /**
-     * 模板引擎
+     * 构造方法
+     *
+     * @param dataSourceConfig 数据库配置
+     * @since 3.5.0
      */
-    private AbstractTemplateEngine templateEngine;
+    public AutoGenerator(@NotNull DataSourceConfig dataSourceConfig) {
+        //这个是必须参数,其他都是可选的,后续去除默认构造更改成final
+        this.dataSource = dataSourceConfig;
+    }
+
+    /**
+     * 注入配置
+     *
+     * @param injectionConfig 注入配置
+     * @return this
+     * @since 3.5.0
+     */
+    public AutoGenerator injection(@NotNull InjectionConfig injectionConfig) {
+        this.injection = injectionConfig;
+        return this;
+    }
+
+    /**
+     * 生成策略
+     *
+     * @param strategyConfig 策略配置
+     * @return this
+     * @since 3.5.0
+     */
+    public AutoGenerator strategy(@NotNull StrategyConfig strategyConfig) {
+        this.strategy = strategyConfig;
+        return this;
+    }
+
+    /**
+     * 指定包配置信息
+     *
+     * @param packageConfig 包配置
+     * @return this
+     * @since 3.5.0
+     */
+    public AutoGenerator packageInfo(@NotNull PackageConfig packageConfig) {
+        this.packageInfo = packageConfig;
+        return this;
+    }
+
+    /**
+     * 指定模板配置
+     *
+     * @param templateConfig 模板配置
+     * @return this
+     * @deprecated 3.5.6 {@link #strategy(StrategyConfig)}
+     * @since 3.5.0
+     */
+    @Deprecated
+    public AutoGenerator template(@NotNull TemplateConfig templateConfig) {
+        this.template = templateConfig;
+        return this;
+    }
+
+    /**
+     * 指定全局配置
+     *
+     * @param globalConfig 全局配置
+     * @return this
+     * @since  3.5.0
+     */
+    public AutoGenerator global(@NotNull GlobalConfig globalConfig) {
+        this.globalConfig = globalConfig;
+        return this;
+    }
+
+    /**
+     * 设置配置汇总
+     *
+     * @param configBuilder 配置汇总
+     * @return this
+     * @since 3.5.0
+     */
+    public AutoGenerator config(@NotNull ConfigBuilder configBuilder) {
+        this.config = configBuilder;
+        return this;
+    }
 
     /**
      * 生成代码
      */
     public void execute() {
-        logger.debug("==========================准备生成文件...==========================");
+        this.execute(null);
+    }
+
+    /**
+     * 生成代码
+     *
+     * @param templateEngine 模板引擎
+     */
+    public void execute(AbstractTemplateEngine templateEngine) {
+        logger.debug("==========================Ready to generate the file...==========================");
         // 初始化配置
         if (null == config) {
-            config = new ConfigBuilder(packageInfo, dataSource, strategy, template, globalConfig);
-            if (null != injectionConfig) {
-                injectionConfig.setConfig(config);
-            }
+            config = new ConfigBuilder(packageInfo, dataSource, strategy, template, globalConfig, injection);
         }
         if (null == templateEngine) {
             // 为了兼容之前逻辑，采用 Velocity 引擎 【 默认 】
             templateEngine = new VelocityTemplateEngine();
         }
+        templateEngine.setConfigBuilder(config);
         // 模板引擎初始化执行文件输出
-        templateEngine.init(this.pretreatmentConfigBuilder(config)).mkdirs().batchOutput().open();
-        logger.debug("==========================文件生成完成！！！==========================");
+        templateEngine.init(config).batchOutput().open();
+        logger.debug("==========================The file is generated！！！==========================");
     }
 
     /**
@@ -113,84 +192,13 @@ public class AutoGenerator {
      * @param config 配置信息
      * @return ignore
      */
-    protected List<TableInfo> getAllTableInfoList(ConfigBuilder config) {
+    @NotNull
+    protected List<TableInfo> getAllTableInfoList(@NotNull ConfigBuilder config) {
         return config.getTableInfoList();
     }
 
-    /**
-     * 预处理配置
-     *
-     * @param config 总配置信息
-     * @return 解析数据结果集
-     */
-    protected ConfigBuilder pretreatmentConfigBuilder(ConfigBuilder config) {
-        /*
-         * 注入自定义配置
-         */
-        if (null != injectionConfig) {
-            injectionConfig.initMap();
-            config.setInjectionConfig(injectionConfig);
-        }
-        /*
-         * 表信息列表
-         */
-        List<TableInfo> tableList = this.getAllTableInfoList(config);
-        for (TableInfo tableInfo : tableList) {
-            /* ---------- 添加导入包 ---------- */
-            if (config.getGlobalConfig().isActiveRecord()) {
-                // 开启 ActiveRecord 模式
-                tableInfo.setImportPackages(Model.class.getCanonicalName());
-            }
-            if (tableInfo.isConvert()) {
-                // 表注解
-                tableInfo.setImportPackages(TableName.class.getCanonicalName());
-            }
-            if (config.getStrategyConfig().getLogicDeleteFieldName() != null && tableInfo.isLogicDelete(config.getStrategyConfig().getLogicDeleteFieldName())) {
-                // 逻辑删除注解
-                tableInfo.setImportPackages(TableLogic.class.getCanonicalName());
-            }
-            if (StringUtils.isNotBlank(config.getStrategyConfig().getVersionFieldName())) {
-                // 乐观锁注解
-                tableInfo.setImportPackages(Version.class.getCanonicalName());
-            }
-            boolean importSerializable = true;
-            if (StringUtils.isNotBlank(config.getStrategyConfig().getSuperEntityClass())) {
-                // 父实体
-                tableInfo.setImportPackages(config.getStrategyConfig().getSuperEntityClass());
-                importSerializable = false;
-            }
-            if (config.getGlobalConfig().isActiveRecord()) {
-                importSerializable = true;
-            }
-            if (importSerializable) {
-                tableInfo.setImportPackages(Serializable.class.getCanonicalName());
-            }
-            // Boolean类型is前缀处理
-            if (config.getStrategyConfig().isEntityBooleanColumnRemoveIsPrefix()
-                && CollectionUtils.isNotEmpty(tableInfo.getFields())) {
-                List<TableField> tableFields = tableInfo.getFields().stream().filter(field -> "boolean".equalsIgnoreCase(field.getPropertyType()))
-                    .filter(field -> field.getPropertyName().startsWith("is")).collect(Collectors.toList());
-                tableFields.forEach(field -> {
-                    //主键为is的情况基本上是不存在的.
-                    if (field.isKeyFlag()) {
-                        tableInfo.setImportPackages(TableId.class.getCanonicalName());
-                    } else {
-                        tableInfo.setImportPackages(com.baomidou.mybatisplus.annotation.TableField.class.getCanonicalName());
-                    }
-                    field.setConvert(true);
-                    field.setPropertyName(StringUtils.removePrefixAfterPrefixToLower(field.getPropertyName(), 2));
-                });
-            }
-        }
-        return config.setTableInfoList(tableList);
+    public InjectionConfig getInjectionConfig() {
+        return injection;
     }
 
-    public InjectionConfig getCfg() {
-        return injectionConfig;
-    }
-
-    public AutoGenerator setCfg(InjectionConfig injectionConfig) {
-        this.injectionConfig = injectionConfig;
-        return this;
-    }
 }

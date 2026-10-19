@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,39 +40,47 @@ import static java.util.stream.Collectors.toList;
  *
  * @author miemie
  * @since 2018-11-09
+ * @deprecated 3.5.0 {@link com.baomidou.mybatisplus.core.injector.methods.DeleteById}
  */
+@Deprecated
 public class LogicDeleteByIdWithFill extends AbstractMethod {
+
+    public LogicDeleteByIdWithFill() {
+        super("deleteByIdWithFill");
+    }
+
+    /**
+     * @param name 方法名
+     * @since 3.5.0
+     */
+    public LogicDeleteByIdWithFill(String name) {
+        super(name);
+    }
 
     @Override
     public MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo) {
         String sql;
-        SqlMethod sqlMethod = SqlMethod.LOGIC_DELETE_BY_ID;
         if (tableInfo.isWithLogicDelete()) {
+            SqlMethod sqlMethod = SqlMethod.LOGIC_DELETE_BY_ID;
             List<TableFieldInfo> fieldInfos = tableInfo.getFieldList().stream()
                 .filter(TableFieldInfo::isWithUpdateFill)
+                .filter(f -> !f.isLogicDelete())
                 .collect(toList());
             if (CollectionUtils.isNotEmpty(fieldInfos)) {
                 String sqlSet = "SET " + fieldInfos.stream().map(i -> i.getSqlSet(EMPTY)).collect(joining(EMPTY))
                     + tableInfo.getLogicDeleteSql(false, false);
-                sql = String.format(sqlMethod.getSql(), tableInfo.getTableName(), sqlSet, tableInfo.getKeyColumn(),
+                sql = sqlMethod.format(tableInfo.getTableName(), sqlSet, tableInfo.getKeyColumn(),
                     tableInfo.getKeyProperty(), tableInfo.getLogicDeleteSql(true, true));
             } else {
-                sql = String.format(sqlMethod.getSql(), tableInfo.getTableName(), sqlLogicSet(tableInfo),
+                sql = sqlMethod.format(tableInfo.getTableName(), sqlLogicSet(tableInfo),
                     tableInfo.getKeyColumn(), tableInfo.getKeyProperty(),
                     tableInfo.getLogicDeleteSql(true, true));
             }
         } else {
-            sqlMethod = SqlMethod.DELETE_BY_ID;
-            sql = String.format(sqlMethod.getSql(), tableInfo.getTableName(), tableInfo.getKeyColumn(),
-                tableInfo.getKeyProperty());
+            sql = SqlMethod.DELETE_BY_ID.format(tableInfo.getTableName(), tableInfo.getKeyColumn(), tableInfo.getKeyProperty());
         }
-        SqlSource sqlSource = languageDriver.createSqlSource(configuration, sql, modelClass);
-        return addUpdateMappedStatement(mapperClass, modelClass, getMethod(sqlMethod), sqlSource);
+        SqlSource sqlSource = super.createSqlSource(configuration, sql, modelClass);
+        return addUpdateMappedStatement(mapperClass, modelClass, methodName, sqlSource);
     }
 
-    @Override
-    public String getMethod(SqlMethod sqlMethod) {
-        // 自定义 mapper 方法名
-        return "deleteByIdWithFill";
-    }
 }

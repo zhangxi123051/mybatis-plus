@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,20 +15,19 @@
  */
 package com.baomidou.mybatisplus.generator.keywords;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import org.jetbrains.annotations.NotNull;
+
+import java.util.*;
 
 /**
- * h2数据库关键字处理
- * http://www.h2database.com/html/advanced.html#keywords
+ * <a href="http://www.h2database.com/html/advanced.html#keywords">h2数据库关键字处理</a>
  *
  * @author nieqiurong 2020/5/7.
  * @since 3.3.2
  */
 public class H2KeyWordsHandler extends BaseKeyWordsHandler {
-    
-    private static List<String> KEY_WORDS = new ArrayList<>(Arrays.asList(
+
+    private static final List<String> KEY_WORDS = new ArrayList<>(Arrays.asList(
         "ALL",
         "AND",
         "ARRAY",
@@ -110,18 +109,22 @@ public class H2KeyWordsHandler extends BaseKeyWordsHandler {
         "WINDOW",
         "WITH"
     ));
-    
+
     public H2KeyWordsHandler() {
-        super(KEY_WORDS);
+        super(new HashSet<>(KEY_WORDS));
     }
-    
-    public H2KeyWordsHandler(List<String> keyWords) {
+
+    public H2KeyWordsHandler(@NotNull List<String> keyWords) {
+        super(new HashSet<>(keyWords));
+    }
+
+    public H2KeyWordsHandler(@NotNull Set<String> keyWords) {
         super(keyWords);
     }
-    
+
     @Override
-    public String formatStyle() {
+    public @NotNull String formatStyle() {
         return "\"%s\"";
     }
-    
+
 }

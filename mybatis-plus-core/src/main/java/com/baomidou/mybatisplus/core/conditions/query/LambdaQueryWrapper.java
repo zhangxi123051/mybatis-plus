@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,11 @@ import com.baomidou.mybatisplus.core.conditions.SharedString;
 import com.baomidou.mybatisplus.core.conditions.segments.MergeSegments;
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
-import com.baomidou.mybatisplus.core.toolkit.ArrayUtils;
 import com.baomidou.mybatisplus.core.toolkit.Assert;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
@@ -34,67 +35,47 @@ import java.util.function.Predicate;
  * @author hubin miemie HCL
  * @since 2017-05-26
  */
-@SuppressWarnings("serial")
 public class LambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, LambdaQueryWrapper<T>>
     implements Query<LambdaQueryWrapper<T>, T, SFunction<T, ?>> {
 
     /**
      * 查询字段
      */
-    private SharedString sqlSelect = new SharedString();
+    protected SharedString sqlSelect = new SharedString();
 
-    /**
-     * 不建议直接 new 该实例，使用 Wrappers.lambdaQuery(entity)
-     */
     public LambdaQueryWrapper() {
         this((T) null);
     }
 
-    /**
-     * 不建议直接 new 该实例，使用 Wrappers.lambdaQuery(entity)
-     */
     public LambdaQueryWrapper(T entity) {
         super.setEntity(entity);
         super.initNeed();
     }
 
-    /**
-     * 不建议直接 new 该实例，使用 Wrappers.lambdaQuery(entity)
-     */
     public LambdaQueryWrapper(Class<T> entityClass) {
         super.setEntityClass(entityClass);
         super.initNeed();
     }
 
-    /**
-     * 不建议直接 new 该实例，使用 Wrappers.lambdaQuery(...)
-     */
     LambdaQueryWrapper(T entity, Class<T> entityClass, SharedString sqlSelect, AtomicInteger paramNameSeq,
-                       Map<String, Object> paramNameValuePairs, MergeSegments mergeSegments,
-                       SharedString lastSql, SharedString sqlComment, SharedString sqlFirst) {
+                       Map<String, Object> paramNameValuePairs, MergeSegments mergeSegments, SharedString paramAlias,
+                       SharedString lastSql, SharedString sqlComment, SharedString sqlFirst, boolean autoMapping) {
         super.setEntity(entity);
         super.setEntityClass(entityClass);
         this.paramNameSeq = paramNameSeq;
         this.paramNameValuePairs = paramNameValuePairs;
         this.expression = mergeSegments;
         this.sqlSelect = sqlSelect;
+        this.paramAlias = paramAlias;
         this.lastSql = lastSql;
         this.sqlComment = sqlComment;
         this.sqlFirst = sqlFirst;
+        this.autoMapping = autoMapping;
     }
 
-    /**
-     * SELECT 部分 SQL 设置
-     *
-     * @param columns 查询字段
-     */
-    @SafeVarargs
     @Override
-    public final LambdaQueryWrapper<T> select(SFunction<T, ?>... columns) {
-        if (ArrayUtils.isNotEmpty(columns)) {
-            this.sqlSelect.setStringValue(columnsToString(false, columns));
-        }
-        return typedThis;
+    public LambdaQueryWrapper<T> select(boolean condition, List<SFunction<T, ?>> columns) {
+        return doSelect(condition, columns);
     }
 
     /**
@@ -121,6 +102,28 @@ public class LambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, LambdaQueryW
     }
 
     @Override
+    @SafeVarargs
+    public final LambdaQueryWrapper<T> select(SFunction<T, ?>... columns) {
+        return doSelect(true, CollectionUtils.toList(columns));
+    }
+
+    @Override
+    @SafeVarargs
+    public final LambdaQueryWrapper<T> select(boolean condition, SFunction<T, ?>... columns) {
+        return doSelect(condition, CollectionUtils.toList(columns));
+    }
+
+    /**
+     * @since 3.5.4
+     */
+    protected LambdaQueryWrapper<T> doSelect(boolean condition, List<SFunction<T, ?>> columns) {
+        if (condition && CollectionUtils.isNotEmpty(columns)) {
+            this.sqlSelect.setStringValue(columnsToString(false, columns));
+        }
+        return typedThis;
+    }
+
+    @Override
     public String getSqlSelect() {
         return sqlSelect.getStringValue();
     }
@@ -132,7 +135,7 @@ public class LambdaQueryWrapper<T> extends AbstractLambdaWrapper<T, LambdaQueryW
     @Override
     protected LambdaQueryWrapper<T> instance() {
         return new LambdaQueryWrapper<>(getEntity(), getEntityClass(), null, paramNameSeq, paramNameValuePairs,
-            new MergeSegments(), SharedString.emptyString(), SharedString.emptyString(), SharedString.emptyString());
+            new MergeSegments(), paramAlias, SharedString.emptyString(), SharedString.emptyString(), SharedString.emptyString(), autoMapping);
     }
 
     @Override

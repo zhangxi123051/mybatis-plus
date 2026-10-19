@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,8 @@
  */
 package com.baomidou.mybatisplus.core.metadata;
 
-import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
-import com.baomidou.mybatisplus.core.toolkit.StringPool;
-
 import java.io.Serializable;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
 import static java.util.stream.Collectors.toList;
@@ -41,17 +37,6 @@ public interface IPage<T> extends Serializable {
     List<OrderItem> orders();
 
     /**
-     * KEY/VALUE 条件
-     *
-     * @return ignore
-     * @deprecated 3.4.0 @2020-06-30
-     */
-    @Deprecated
-    default Map<Object, Object> condition() {
-        return null;
-    }
-
-    /**
      * 自动优化 COUNT SQL【 默认：true 】
      *
      * @return true 是 / false 否
@@ -61,11 +46,22 @@ public interface IPage<T> extends Serializable {
     }
 
     /**
+     * {@link com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor#isOptimizeJoin()}
+     * 两个参数都为 true 才会进行sql处理
+     *
+     * @return true 是 / false 否
+     * @since 3.4.4 @2021-09-13
+     */
+    default boolean optimizeJoinOfCountSql() {
+        return true;
+    }
+
+    /**
      * 进行 count 查询 【 默认: true 】
      *
      * @return true 是 / false 否
      */
-    default boolean isSearchCount() {
+    default boolean searchCount() {
         return true;
     }
 
@@ -77,7 +73,7 @@ public interface IPage<T> extends Serializable {
         if (current <= 1L) {
             return 0L;
         }
-        return (current - 1) * getSize();
+        return Math.max((current - 1) * getSize(), 0L);
     }
 
     /**
@@ -106,34 +102,12 @@ public interface IPage<T> extends Serializable {
     /**
      * 内部什么也不干
      * <p>只是为了 json 反序列化时不报错</p>
+     * @deprecated 3.5.8
      */
+    @Deprecated
     default IPage<T> setPages(long pages) {
         // to do nothing
         return this;
-    }
-
-    /**
-     * 设置是否命中count缓存
-     *
-     * @param hit 是否命中
-     * @since 3.3.1
-     * @deprecated 3.4.0 @2020-06-30 缓存遵循mybatis的一或二缓
-     */
-    @Deprecated
-    default void hitCount(boolean hit) {
-
-    }
-
-    /**
-     * 是否命中count缓存
-     *
-     * @return 是否命中count缓存
-     * @since 3.3.1
-     * @deprecated 3.4.0 @2020-06-30 缓存遵循mybatis的一或二缓
-     */
-    @Deprecated
-    default boolean isHitCount() {
-        return false;
     }
 
     /**
@@ -208,25 +182,4 @@ public interface IPage<T> extends Serializable {
     default String countId() {
         return null;
     }
-
-    /**
-     * 生成缓存key值
-     *
-     * @return 缓存key值
-     * @since 3.3.2
-     * @deprecated 3.4.0 @2020-06-30
-     */
-    @Deprecated
-    default String cacheKey() {
-        StringBuilder key = new StringBuilder();
-        key.append(offset()).append(StringPool.COLON).append(getSize());
-        List<OrderItem> orders = orders();
-        if (CollectionUtils.isNotEmpty(orders)) {
-            for (OrderItem item : orders) {
-                key.append(StringPool.COLON).append(item.getColumn()).append(StringPool.COLON).append(item.isAsc());
-            }
-        }
-        return key.toString();
-    }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 package com.baomidou.mybatisplus.core.toolkit;
+
+import org.apache.ibatis.io.Resources;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -31,17 +33,25 @@ import java.util.List;
  */
 public final class ClassUtils {
 
-    private static final char PACKAGE_SEPARATOR = '.';
+    private static ClassLoader systemClassLoader;
+
+    static {
+        try {
+            systemClassLoader = ClassLoader.getSystemClassLoader();
+        } catch (SecurityException ignored) {
+            // AccessControlException on Google App Engine
+        }
+    }
 
     /**
      * 代理 class 的名称
      */
     private static final List<String> PROXY_CLASS_NAMES = Arrays.asList("net.sf.cglib.proxy.Factory"
-            // cglib
-            , "org.springframework.cglib.proxy.Factory"
-            , "javassist.util.proxy.ProxyObject"
-            // javassist
-            , "org.apache.ibatis.javassist.util.proxy.ProxyObject");
+        // cglib
+        , "org.springframework.cglib.proxy.Factory"
+        , "javassist.util.proxy.ProxyObject"
+        // javassist
+        , "org.apache.ibatis.javassist.util.proxy.ProxyObject");
 
     private ClassUtils() {
     }
@@ -116,7 +126,8 @@ public final class ClassUtils {
             Constructor<T> constructor = clazz.getDeclaredConstructor();
             constructor.setAccessible(true);
             return constructor.newInstance();
-        } catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+        } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
+                 NoSuchMethodException e) {
             throw ExceptionUtils.mpe("实例化对象时出现错误,请尝试给 %s 添加无参的构造方法", e, clazz.getName());
         }
     }
@@ -124,7 +135,7 @@ public final class ClassUtils {
     /**
      * 实例化对象.
      *
-     * @param clazzName 类名
+     * @param clazzName 全类名
      * @param <T>       类型
      * @return 实例
      * @since 3.3.2
@@ -140,19 +151,38 @@ public final class ClassUtils {
      * 请仅在确定类存在的情况下调用该方法
      * </p>
      *
-     * @param name 类名称
+     * @param name 全类名
      * @return 返回转换后的 Class
      */
     public static Class<?> toClassConfident(String name) {
+        return toClassConfident(name, null);
+    }
+
+    /**
+     * @param name        全类名
+     * @param classLoader 类加载器
+     * @return Class信息
+     * @since 3.4.3
+     */
+    public static Class<?> toClassConfident(String name, ClassLoader classLoader) {
         try {
-            return Class.forName(name, false, getDefaultClassLoader());
+            return loadClass(name, getClassLoaders(classLoader));
         } catch (ClassNotFoundException e) {
-            try {
-                return Class.forName(name);
-            } catch (ClassNotFoundException ex) {
-                throw ExceptionUtils.mpe("找不到指定的class！请仅在明确确定会有 class 的时候，调用该方法", e);
+            throw ExceptionUtils.mpe("找不到指定的class！请仅在明确确定会有 class 的时候，调用该方法", e);
+        }
+    }
+
+    private static Class<?> loadClass(String className, ClassLoader[] classLoaders) throws ClassNotFoundException {
+        for (ClassLoader classLoader : classLoaders) {
+            if (classLoader != null) {
+                try {
+                    return Class.forName(className, true, classLoader);
+                } catch (ClassNotFoundException e) {
+                    // ignore
+                }
             }
         }
+        throw new ClassNotFoundException("Cannot find class: " + className);
     }
 
 
@@ -179,8 +209,8 @@ public final class ClassUtils {
      */
     public static String getPackageName(String fqClassName) {
         Assert.notNull(fqClassName, "Class name must not be null");
-        int lastDotIndex = fqClassName.lastIndexOf(PACKAGE_SEPARATOR);
-        return (lastDotIndex != -1 ? fqClassName.substring(0, lastDotIndex) : "");
+        int lastDotIndex = fqClassName.lastIndexOf(StringPool.DOT);
+        return (lastDotIndex != -1 ? fqClassName.substring(0, lastDotIndex) : StringPool.EMPTY);
     }
 
     /**
@@ -199,6 +229,7 @@ public final class ClassUtils {
      * @see ClassLoader#getSystemClassLoader()
      * @since 3.3.2
      */
+    @Deprecated
     public static ClassLoader getDefaultClassLoader() {
         ClassLoader cl = null;
         try {
@@ -219,5 +250,14 @@ public final class ClassUtils {
             }
         }
         return cl;
+    }
+
+    private static ClassLoader[] getClassLoaders(ClassLoader classLoader) {
+        return new ClassLoader[]{
+            classLoader,
+            Resources.getDefaultClassLoader(),
+            Thread.currentThread().getContextClassLoader(),
+            ClassUtils.class.getClassLoader(),
+            systemClassLoader};
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,14 @@ import com.baomidou.mybatisplus.core.conditions.SharedString
 import com.baomidou.mybatisplus.core.conditions.segments.MergeSegments
 import com.baomidou.mybatisplus.core.conditions.update.Update
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils
+import com.baomidou.mybatisplus.core.toolkit.Constants
 import com.baomidou.mybatisplus.core.toolkit.StringPool
 import com.baomidou.mybatisplus.core.toolkit.StringUtils
 import com.baomidou.mybatisplus.core.toolkit.support.ColumnCache
+import java.math.BigDecimal
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.stream.Collectors.joining
-import kotlin.reflect.KProperty
+import kotlin.reflect.KProperty1
 
 /**
  * Kotlin Lambda 更新封装
@@ -32,7 +34,8 @@ import kotlin.reflect.KProperty
  * @author yangyuhan
  * @since 2018-11-02
  */
-class KtUpdateWrapper<T : Any> : AbstractKtWrapper<T, KtUpdateWrapper<T>>, Update<KtUpdateWrapper<T>, KProperty<*>> {
+@Suppress("serial")
+open class KtUpdateWrapper<T : Any> : AbstractKtWrapper<T, KtUpdateWrapper<T>>, Update<KtUpdateWrapper<T>, KProperty1<in T, *>> {
 
     /**
      * SQL 更新字段内容，例如：name='1', age=2
@@ -67,18 +70,31 @@ class KtUpdateWrapper<T : Any> : AbstractKtWrapper<T, KtUpdateWrapper<T>>, Updat
         else sqlSet.stream().collect(joining(StringPool.COMMA))
     }
 
-    override fun setSql(condition: Boolean, sql: String): KtUpdateWrapper<T> {
-        if (condition && StringUtils.isNotBlank(sql)) {
-            sqlSet.add(sql)
+    override fun set(condition: Boolean, column: KProperty1<in T, *>, value: Any?, mapping: String?): KtUpdateWrapper<T> {
+        return maybeDo(condition) {
+            val sql = formatParam(mapping, value)
+            sqlSet.add(columnsToString(column) + Constants.EQUALS + sql)
         }
-        return typedThis
     }
 
-    override fun set(condition: Boolean, column: KProperty<*>, value: Any?): KtUpdateWrapper<T> {
-        if (condition) {
-            sqlSet.add(String.format("%s=%s", columnToString(column), formatSql("{0}", value)))
+    override fun setSql(condition: Boolean, setSql: String, vararg params: Any): KtUpdateWrapper<T> {
+        return maybeDo(condition && StringUtils.isNotBlank(setSql)) {
+            sqlSet.add(formatSqlMaybeWithParam(setSql, *params))
         }
-        return typedThis
+    }
+
+    override fun setIncrBy(condition: Boolean, column: KProperty1<in T, *>, `val`: Number): KtUpdateWrapper<T> {
+        return maybeDo(condition) {
+            val realColumn = columnToString(column)
+            sqlSet.add(String.format("%s=%s + %s", realColumn, realColumn, if (`val` is BigDecimal) `val`.toPlainString() else `val`))
+        }
+    }
+
+    override fun setDecrBy(condition: Boolean, column: KProperty1<in T, *>, `val`: Number): KtUpdateWrapper<T> {
+        return maybeDo(condition) {
+            val realColumn = columnToString(column)
+            sqlSet.add(String.format("%s=%s - %s", realColumn, realColumn, if (`val` is BigDecimal) `val`.toPlainString() else `val`));
+        }
     }
 
     override fun instance(): KtUpdateWrapper<T> {

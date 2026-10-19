@@ -1,5 +1,7 @@
 package com.baomidou.mybatisplus.test.logicdel;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import lombok.Data;
 
@@ -16,6 +18,9 @@ public class Entity implements Serializable {
     private Long id;
 
     private String name;
+
+    @TableField(fill = FieldFill.UPDATE)
+    private String deleteBy;
 
     @TableLogic(delval = "true", value = "false")
     private Boolean deleted;

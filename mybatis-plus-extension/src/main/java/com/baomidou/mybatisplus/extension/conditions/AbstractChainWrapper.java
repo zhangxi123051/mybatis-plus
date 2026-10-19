@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,11 @@ import com.baomidou.mybatisplus.core.conditions.interfaces.Func;
 import com.baomidou.mybatisplus.core.conditions.interfaces.Join;
 import com.baomidou.mybatisplus.core.conditions.interfaces.Nested;
 import com.baomidou.mybatisplus.core.conditions.segments.MergeSegments;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiPredicate;
 import java.util.function.Consumer;
@@ -37,7 +39,7 @@ import java.util.function.Consumer;
  * @author miemie
  * @since 2018-12-19
  */
-@SuppressWarnings({"serial", "unchecked"})
+@SuppressWarnings({"unchecked"})
 public abstract class AbstractChainWrapper<T, R, Children extends AbstractChainWrapper<T, R, Children, Param>, Param extends AbstractWrapper<T, R, Param>>
     extends Wrapper<T> implements Compare<Children, R>, Func<Children, R>, Join<Children>, Nested<Param, Children> {
 
@@ -82,6 +84,12 @@ public abstract class AbstractChainWrapper<T, R, Children extends AbstractChainW
     @Override
     public Children eq(boolean condition, R column, Object val) {
         getWrapper().eq(condition, column, val);
+        return typedThis;
+    }
+
+    @Override
+    public Children eqOrIsNull(boolean condition, R column, Object val) {
+        getWrapper().eqOrIsNull(condition, column, val);
         return typedThis;
     }
 
@@ -134,12 +142,6 @@ public abstract class AbstractChainWrapper<T, R, Children extends AbstractChainW
     }
 
     @Override
-    public Children notLike(boolean condition, R column, Object val) {
-        getWrapper().notLike(condition, column, val);
-        return typedThis;
-    }
-
-    @Override
     public Children likeLeft(boolean condition, R column, Object val) {
         getWrapper().likeLeft(condition, column, val);
         return typedThis;
@@ -148,6 +150,24 @@ public abstract class AbstractChainWrapper<T, R, Children extends AbstractChainW
     @Override
     public Children likeRight(boolean condition, R column, Object val) {
         getWrapper().likeRight(condition, column, val);
+        return typedThis;
+    }
+
+    @Override
+    public Children notLike(boolean condition, R column, Object val) {
+        getWrapper().notLike(condition, column, val);
+        return typedThis;
+    }
+
+    @Override
+    public Children notLikeLeft(boolean condition, R column, Object val) {
+        getWrapper().notLikeLeft(condition, column, val);
+        return typedThis;
+    }
+
+    @Override
+    public Children notLikeRight(boolean condition, R column, Object val) {
+        getWrapper().notLikeRight(condition, column, val);
         return typedThis;
     }
 
@@ -170,8 +190,26 @@ public abstract class AbstractChainWrapper<T, R, Children extends AbstractChainW
     }
 
     @Override
+    public Children in(boolean condition, R column, Object... values) {
+        getWrapper().in(condition, column, values);
+        return typedThis;
+    }
+
+    @Override
     public Children notIn(boolean condition, R column, Collection<?> coll) {
         getWrapper().notIn(condition, column, coll);
+        return typedThis;
+    }
+
+    @Override
+    public Children notIn(boolean condition, R column, Object... values) {
+        getWrapper().notIn(condition, column, values);
+        return typedThis;
+    }
+
+    @Override
+    public Children eqSql(boolean condition, R column, String eqValue) {
+        getWrapper().eqSql(condition, column, eqValue);
         return typedThis;
     }
 
@@ -182,21 +220,127 @@ public abstract class AbstractChainWrapper<T, R, Children extends AbstractChainW
     }
 
     @Override
+    public Children gtSql(boolean condition, R column, String inValue) {
+        getWrapper().gtSql(condition, column, inValue);
+        return typedThis;
+    }
+
+    @Override
+    public Children geSql(boolean condition, R column, String inValue) {
+        getWrapper().geSql(condition, column, inValue);
+        return typedThis;
+    }
+
+    @Override
+    public Children ltSql(boolean condition, R column, String inValue) {
+        getWrapper().ltSql(condition, column, inValue);
+        return typedThis;
+    }
+
+    @Override
+    public Children leSql(boolean condition, R column, String inValue) {
+        getWrapper().leSql(condition, column, inValue);
+        return typedThis;
+    }
+
+    @Override
     public Children notInSql(boolean condition, R column, String inValue) {
         getWrapper().notInSql(condition, column, inValue);
         return typedThis;
     }
 
     @Override
-    public Children groupBy(boolean condition, R... columns) {
-        getWrapper().groupBy(condition, columns);
-        return typedThis;
+    @SafeVarargs
+    public final Children groupBy(boolean condition, R column, R... columns) {
+        return doGroupBy(condition, column, CollectionUtils.toList(columns));
     }
 
     @Override
-    public Children orderBy(boolean condition, boolean isAsc, R... columns) {
-        getWrapper().orderBy(condition, isAsc, columns);
+    public Children groupBy(boolean condition, R column, List<R> columns) {
+        return doGroupBy(condition, column, columns);
+    }
+
+    @Override
+    public Children groupBy(boolean condition, R column) {
+        return doGroupBy(condition, column, null);
+    }
+
+    @Override
+    public Children groupBy(boolean condition, List<R> columns) {
+        return doGroupBy(condition, null, columns);
+    }
+
+    @Override
+    @SafeVarargs
+    public final Children orderBy(boolean condition, boolean isAsc, R column, R... columns) {
+        return orderBy(condition, isAsc, column, CollectionUtils.toList(columns));
+    }
+
+    @Override
+    public Children orderBy(boolean condition, boolean isAsc, R column, List<R> columns) {
+        return doOrderBy(condition, isAsc, column, columns);
+    }
+
+    @Override
+    @SafeVarargs
+    public final Children groupBy(R column, R... columns) {
+        return doGroupBy(true, column, CollectionUtils.toList(columns));
+    }
+
+    @Override
+    @SafeVarargs
+    public final Children orderByAsc(R column, R... columns) {
+        return orderByAsc(true, column, columns);
+    }
+
+    @Override
+    @SafeVarargs
+    public final Children orderByAsc(boolean condition, R column, R... columns) {
+        return doOrderByAsc(condition, column, CollectionUtils.toList(columns));
+    }
+
+    @Override
+    @SafeVarargs
+    public final Children orderByDesc(boolean condition, R column, R... columns) {
+        return doOrderByDesc(condition, column, CollectionUtils.toList(columns));
+    }
+
+    @Override
+    @SafeVarargs
+    public final Children orderByDesc(R column, R... columns) {
+        return orderByDesc(true, column, columns);
+    }
+
+    // --------------  新增重写方法开始----------------
+    protected Children doOrderByDesc(boolean condition, R column, List<R> columns) {
+        return doOrderBy(condition, false, column, columns);
+    }
+
+    protected Children doOrderByAsc(boolean condition, R column, List<R> columns) {
+        return doOrderBy(condition, true, column, columns);
+    }
+
+    protected Children doOrderBy(boolean condition, boolean isAsc, R column, List<R> columns) {
+        getWrapper().doOrderBy(condition, isAsc, column, columns);
         return typedThis;
+    }
+
+    protected Children doGroupBy(boolean condition, R column, List<R> columns) {
+        getWrapper().doGroupBy(condition, column, columns);
+        return typedThis;
+    }
+
+
+    // --------------  新增重写方法结束----------------
+
+    @Override
+    public Children orderBy(boolean condition, boolean isAsc, R column) {
+        return doOrderBy(condition, isAsc, column, null);
+    }
+
+    @Override
+    public Children orderBy(boolean condition, boolean isAsc, List<R> columns) {
+        return doOrderBy(condition, isAsc, null, columns);
     }
 
     @Override
@@ -220,8 +364,8 @@ public abstract class AbstractChainWrapper<T, R, Children extends AbstractChainW
     }
 
     @Override
-    public Children apply(boolean condition, String applySql, Object... value) {
-        getWrapper().apply(condition, applySql, value);
+    public Children apply(boolean condition, String applySql, Object... values) {
+        getWrapper().apply(condition, applySql, values);
         return typedThis;
     }
 
@@ -244,14 +388,14 @@ public abstract class AbstractChainWrapper<T, R, Children extends AbstractChainW
     }
 
     @Override
-    public Children exists(boolean condition, String existsSql) {
-        getWrapper().exists(condition, existsSql);
+    public Children exists(boolean condition, String existsSql, Object... values) {
+        getWrapper().exists(condition, existsSql, values);
         return typedThis;
     }
 
     @Override
-    public Children notExists(boolean condition, String existsSql) {
-        getWrapper().notExists(condition, existsSql);
+    public Children notExists(boolean condition, String existsSql, Object... values) {
+        getWrapper().notExists(condition, existsSql, values);
         return typedThis;
     }
 

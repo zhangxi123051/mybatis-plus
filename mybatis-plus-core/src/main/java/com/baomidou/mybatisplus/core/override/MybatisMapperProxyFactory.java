@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package com.baomidou.mybatisplus.core.override;
 
-import lombok.Getter;
+import com.baomidou.mybatisplus.core.override.MybatisMapperProxy.MapperMethodInvoker;
 import org.apache.ibatis.binding.MapperProxyFactory;
 import org.apache.ibatis.session.SqlSession;
 
@@ -25,21 +25,29 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * <p>从 {@link MapperProxyFactory} copy 过来 </p>
- * <li> 使用 MybatisMapperMethod </li>
+ * <p>
+ * 从 {@link MapperProxyFactory} copy 过来
+ * </p>
+ * <li>使用 MybatisMapperMethod</li>
  *
  * @author miemie
  * @since 2018-06-09
  */
 public class MybatisMapperProxyFactory<T> {
-    
-    @Getter
+
     private final Class<T> mapperInterface;
-    @Getter
-    private final Map<Method, MybatisMapperProxy.MapperMethodInvoker> methodCache = new ConcurrentHashMap<>();
-    
+    private final Map<Method, MapperMethodInvoker> methodCache = new ConcurrentHashMap<>();
+
     public MybatisMapperProxyFactory(Class<T> mapperInterface) {
         this.mapperInterface = mapperInterface;
+    }
+
+    public Class<T> getMapperInterface() {
+        return mapperInterface;
+    }
+
+    public Map<Method, MapperMethodInvoker> getMethodCache() {
+        return methodCache;
     }
 
     @SuppressWarnings("unchecked")

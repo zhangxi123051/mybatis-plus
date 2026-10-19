@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,16 @@ import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.baomidou.mybatisplus.core.toolkit.Assert;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,10 +40,10 @@ import java.util.regex.Pattern;
  * @author Caratacus
  * @since 2016-11-13
  */
-@SuppressWarnings("serial")
 public abstract class SqlUtils implements Constants {
-
-    private static final Pattern pattern = Pattern.compile("\\{@((\\w+?)|(\\w+?:\\w+?)|(\\w+?:\\w+?:\\w+?))}");
+    private static final String tp = "[\\w-,]+?";
+    private static final Pattern pattern = Pattern.compile(String.format("\\{@((%s)|(%s:\\w+?)|(%s:\\w+?:\\w+?))}", tp, tp, tp));
+    private static final Map<String, String> PLACEHOLDER_CACHE = new ConcurrentHashMap<>();
 
     /**
      * 用%连接like
@@ -57,6 +62,25 @@ public abstract class SqlUtils implements Constants {
         }
     }
 
+    /**
+     * 获取字段自操作sql片段
+     *
+     * @param column 字段名称
+     * @param incr true 加 false 减
+     * @param val 字段值
+     * @return 执行sql片段
+     */
+    public static String selfOperation(String column, boolean incr, Number val) {
+        StringBuilder segment = new StringBuilder();
+        segment.append(column).append("=").append(column).append(incr ? " + " : " - ");
+        if (val instanceof BigDecimal) {
+            segment.append(((BigDecimal) val).toPlainString());
+        } else {
+            segment.append(val);
+        }
+        return segment.toString();
+    }
+
     public static List<String> findPlaceholder(String sql) {
         Matcher matcher = pattern.matcher(sql);
         List<String> list = new ArrayList<>();
@@ -68,33 +92,45 @@ public abstract class SqlUtils implements Constants {
 
     public static String replaceSqlPlaceholder(String sql, List<String> placeHolder, String escapeSymbol) {
         for (String s : placeHolder) {
-            String s1 = s.substring(2, s.length() - 1);
-            int i1 = s1.indexOf(COLON);
-            String tableName;
-            String alisa = null;
-            String asAlisa = null;
-            if (i1 < 0) {
-                tableName = s1;
-            } else {
-                tableName = s1.substring(0, i1);
-                s1 = s1.substring(i1 + 1);
-                i1 = s1.indexOf(COLON);
-                if (i1 < 0) {
-                    alisa = s1;
-                } else {
-                    alisa = s1.substring(0, i1);
-                    asAlisa = s1.substring(i1 + 1);
-                }
-            }
-            sql = sql.replace(s, getSelectBody(tableName, alisa, asAlisa, escapeSymbol));
+            String body = CollectionUtils.computeIfAbsent(PLACEHOLDER_CACHE, s + escapeSymbol, s1 -> getSelectBody(s, escapeSymbol));
+            sql = sql.replace(s, body);
         }
         return sql;
     }
 
+    public static String getSelectBody(String placeHolder, String escapeSymbol) {
+        String s1 = placeHolder.substring(2, placeHolder.length() - 1);
+        int i1 = s1.indexOf(COLON);
+        String tableName;
+        String alisa = null;
+        String asAlisa = null;
+        if (i1 < 0) {
+            tableName = s1;
+        } else {
+            tableName = s1.substring(0, i1);
+            s1 = s1.substring(i1 + 1);
+            i1 = s1.indexOf(COLON);
+            if (i1 < 0) {
+                alisa = s1;
+            } else {
+                alisa = s1.substring(0, i1);
+                asAlisa = s1.substring(i1 + 1);
+            }
+        }
+        return getSelectBody(tableName, alisa, asAlisa, escapeSymbol);
+    }
+
+    @SuppressWarnings("all")
     public static String getSelectBody(String tableName, String alisa, String asAlisa, String escapeSymbol) {
+        int notSel = tableName.indexOf("-");
+        List<String> notSelColl = null;
+        if (notSel > 0) {
+            notSelColl = Arrays.asList(tableName.substring(notSel + 1).split(COMMA));
+            tableName = tableName.substring(0, notSel);
+        }
         TableInfo tableInfo = TableInfoHelper.getTableInfo(tableName);
         Assert.notNull(tableInfo, "can not find TableInfo Cache by \"%s\"", tableName);
-        String s = tableInfo.chooseSelect(TableFieldInfo::isSelect);
+        String s = tableInfo.chooseSelect(TableFieldInfo::isSelect, notSelColl);
         if (alisa == null) {
             return s;
         }
@@ -109,14 +145,17 @@ public abstract class SqlUtils implements Constants {
             final String sa = alisa.concat(DOT);
             if (asA) {
                 int as = body.indexOf(AS);
+                String column;
+                String property;
                 if (as < 0) {
-                    sb.append(sa).append(body).append(AS).append(escapeColumn(asAlisa.concat(DOT).concat(body), escapeSymbol));
+                    column = body;
+                    property = StringUtils.getTargetColumn(body);
                 } else {
-                    String column = body.substring(0, as);
-                    String property = body.substring(as + 4);
+                    column = body.substring(0, as);
+                    property = body.substring(as + 4);
                     property = StringUtils.getTargetColumn(property);
-                    sb.append(sa).append(column).append(AS).append(escapeColumn(asAlisa.concat(DOT).concat(property), escapeSymbol));
                 }
+                sb.append(sa).append(column).append(AS).append(escapeColumn(asAlisa.concat(DOT).concat(property), escapeSymbol));
             } else {
                 sb.append(sa).append(body);
             }

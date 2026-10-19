@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package com.baomidou.mybatisplus.generator.config;
 
 import com.baomidou.mybatisplus.generator.config.po.TableField;
 import com.baomidou.mybatisplus.generator.config.rules.IColumnType;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * 数据库字段类型转换
@@ -34,7 +35,7 @@ public interface ITypeConvert {
      * @param tableField   字段列信息
      * @return ignore
      */
-    default IColumnType processTypeConvert(GlobalConfig globalConfig, TableField tableField) {
+    default IColumnType processTypeConvert(@NotNull GlobalConfig globalConfig, @NotNull TableField tableField) {
         return processTypeConvert(globalConfig, tableField.getType());
     }
 
@@ -45,6 +46,6 @@ public interface ITypeConvert {
      * @param fieldType    字段类型
      * @return ignore
      */
-    IColumnType processTypeConvert(GlobalConfig globalConfig, String fieldType);
+    IColumnType processTypeConvert(@NotNull GlobalConfig globalConfig, @NotNull String fieldType);
 
 }

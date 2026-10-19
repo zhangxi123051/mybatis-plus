@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,16 @@
  */
 package com.baomidou.mybatisplus.core.injector;
 
-import com.baomidou.mybatisplus.core.enums.SqlMethod;
+import com.baomidou.mybatisplus.core.metadata.OrderFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableFieldInfo;
 import com.baomidou.mybatisplus.core.metadata.TableInfo;
+import com.baomidou.mybatisplus.core.toolkit.Assert;
+import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.Constants;
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.core.toolkit.sql.SqlScriptUtils;
 import org.apache.ibatis.builder.MapperBuilderAssistant;
+import org.apache.ibatis.builder.SqlSourceBuilder;
 import org.apache.ibatis.executor.keygen.KeyGenerator;
 import org.apache.ibatis.executor.keygen.NoKeyGenerator;
 import org.apache.ibatis.logging.Log;
@@ -32,6 +36,7 @@ import org.apache.ibatis.mapping.StatementType;
 import org.apache.ibatis.scripting.LanguageDriver;
 import org.apache.ibatis.session.Configuration;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -45,13 +50,31 @@ import static java.util.stream.Collectors.joining;
  * @author hubin
  * @since 2018-04-06
  */
-@SuppressWarnings("serial")
 public abstract class AbstractMethod implements Constants {
-    protected static final Log logger = LogFactory.getLog(AbstractMethod.class);
+
+    protected final Log logger = LogFactory.getLog(getClass());
 
     protected Configuration configuration;
+
     protected LanguageDriver languageDriver;
+
     protected MapperBuilderAssistant builderAssistant;
+
+    /**
+     * 方法名称
+     *
+     * @since 3.5.0
+     */
+    protected final String methodName;
+
+    /**
+     * @param methodName 方法名
+     * @since 3.5.0
+     */
+    protected AbstractMethod(String methodName) {
+        Assert.notNull(methodName, "方法名不能为空");
+        this.methodName = methodName;
+    }
 
     /**
      * 注入自定义方法
@@ -98,15 +121,12 @@ public abstract class AbstractMethod implements Constants {
                             final String prefix) {
         String sqlScript = table.getAllSqlSet(logic, prefix);
         if (judgeAliasNull) {
-            sqlScript = SqlScriptUtils.convertIf(sqlScript, String.format("%s != null", alias), true);
+            sqlScript = SqlScriptUtils.convertIf(sqlScript, alias + " != null", true);
         }
         if (ew) {
-            sqlScript += NEWLINE;
-            sqlScript += SqlScriptUtils.convertIf(SqlScriptUtils.unSafeParam(U_WRAPPER_SQL_SET),
-                String.format("%s != null and %s != null", WRAPPER, U_WRAPPER_SQL_SET), false);
+            sqlScript = sqlScript + NEWLINE + convertIfEwParam(U_WRAPPER_SQL_SET, false);
         }
-        sqlScript = SqlScriptUtils.convertSet(sqlScript);
-        return sqlScript;
+        return SqlScriptUtils.convertSet(sqlScript);
     }
 
     /**
@@ -115,8 +135,7 @@ public abstract class AbstractMethod implements Constants {
      * @return sql
      */
     protected String sqlComment() {
-        return SqlScriptUtils.convertChoose(String.format("%s != null and %s != null", WRAPPER, Q_WRAPPER_SQL_COMMENT),
-            SqlScriptUtils.unSafeParam(Q_WRAPPER_SQL_COMMENT), EMPTY);
+        return NEWLINE + convertIfEwParam(Q_WRAPPER_SQL_COMMENT, true);
     }
 
     /**
@@ -125,8 +144,11 @@ public abstract class AbstractMethod implements Constants {
      * @return sql
      */
     protected String sqlFirst() {
-        return SqlScriptUtils.convertChoose(String.format("%s != null and %s != null", WRAPPER, Q_WRAPPER_SQL_FIRST),
-            SqlScriptUtils.unSafeParam(Q_WRAPPER_SQL_FIRST), EMPTY);
+        return convertIfEwParam(Q_WRAPPER_SQL_FIRST, true);
+    }
+
+    protected String convertIfEwParam(final String param, final boolean newLine) {
+        return SqlScriptUtils.convertIf(SqlScriptUtils.unSafeParam(param), WRAPPER + " != null and " + param + " != null", newLine);
     }
 
     /**
@@ -146,8 +168,7 @@ public abstract class AbstractMethod implements Constants {
         if (!queryWrapper) {
             return selectColumns;
         }
-        return SqlScriptUtils.convertChoose(String.format("%s != null and %s != null", WRAPPER, Q_WRAPPER_SQL_SELECT),
-            SqlScriptUtils.unSafeParam(Q_WRAPPER_SQL_SELECT), selectColumns);
+        return convertChooseEwSelect(selectColumns);
     }
 
     /**
@@ -156,8 +177,7 @@ public abstract class AbstractMethod implements Constants {
      * @return count sql 脚本
      */
     protected String sqlCount() {
-        return SqlScriptUtils.convertChoose(String.format("%s != null and %s != null", WRAPPER, Q_WRAPPER_SQL_SELECT),
-            SqlScriptUtils.unSafeParam(Q_WRAPPER_SQL_SELECT), ASTERISK);
+        return convertChooseEwSelect(ASTERISK);
     }
 
     /**
@@ -166,33 +186,41 @@ public abstract class AbstractMethod implements Constants {
      * @param table 表信息
      */
     protected String sqlSelectObjsColumns(TableInfo table) {
-        return SqlScriptUtils.convertChoose(String.format("%s != null and %s != null", WRAPPER, Q_WRAPPER_SQL_SELECT),
-            SqlScriptUtils.unSafeParam(Q_WRAPPER_SQL_SELECT), table.getAllSqlSelect());
+        return convertChooseEwSelect(table.getAllSqlSelect());
+    }
+
+    protected String convertChooseEwSelect(final String otherwise) {
+        return SqlScriptUtils.convertChoose(WRAPPER + " != null and " + Q_WRAPPER_SQL_SELECT + " != null",
+            SqlScriptUtils.unSafeParam(Q_WRAPPER_SQL_SELECT), otherwise);
     }
 
     /**
      * SQL map 查询条件
      */
+    @Deprecated
     protected String sqlWhereByMap(TableInfo table) {
         if (table.isWithLogicDelete()) {
             // 逻辑删除
             String sqlScript = SqlScriptUtils.convertChoose("v == null", " ${k} IS NULL ",
                 " ${k} = #{v} ");
-            sqlScript = SqlScriptUtils.convertForeach(sqlScript, "cm", "k", "v", "AND");
-            sqlScript = SqlScriptUtils.convertIf(sqlScript, "cm != null and !cm.isEmpty", true);
+            sqlScript = SqlScriptUtils.convertForeach(sqlScript, COLUMN_MAP, "k", "v", "AND");
+            sqlScript = SqlScriptUtils.convertIf(sqlScript, COLUMN_MAP + " != null and !" + COLUMN_MAP + ".isEmpty", true);
             sqlScript += (NEWLINE + table.getLogicDeleteSql(true, true));
-            sqlScript = SqlScriptUtils.convertWhere(sqlScript);
-            return sqlScript;
+            return SqlScriptUtils.convertWhere(sqlScript);
         } else {
             String sqlScript = SqlScriptUtils.convertChoose("v == null", " ${k} IS NULL ",
                 " ${k} = #{v} ");
             sqlScript = SqlScriptUtils.convertForeach(sqlScript, COLUMN_MAP, "k", "v", "AND");
             sqlScript = SqlScriptUtils.convertWhere(sqlScript);
-            sqlScript = SqlScriptUtils.convertIf(sqlScript, String.format("%s != null and !%s", COLUMN_MAP,
-                COLUMN_MAP_IS_EMPTY), true);
-            return sqlScript;
+            return SqlScriptUtils.convertIf(sqlScript, COLUMN_MAP + " != null and !" + COLUMN_MAP_IS_EMPTY, true);
         }
     }
+
+    private static final String BIND_SQL_SEGMENT = "<bind name=\"_sgEs_\" value=\"ew.sqlSegment != null and ew.sqlSegment != ''\"/>";
+
+    private static final String AND_SQL_SEGMENT = SqlScriptUtils.convertIf(" AND ${" + WRAPPER_SQLSEGMENT + "}", "_sgEs_ and " + WRAPPER_NONEMPTYOFNORMAL, true);
+
+    private static final String LAST_SQL_SEGMENT = SqlScriptUtils.convertIf(" ${" + WRAPPER_SQLSEGMENT + "}", "_sgEs_ and " + WRAPPER_EMPTYOFNORMAL, true);
 
     /**
      * EntityWrapper方式获取select where
@@ -202,37 +230,40 @@ public abstract class AbstractMethod implements Constants {
      * @return String
      */
     protected String sqlWhereEntityWrapper(boolean newLine, TableInfo table) {
+        /*
+         * 存在逻辑删除 SQL 注入
+         */
         if (table.isWithLogicDelete()) {
-            String sqlScript = table.getAllSqlWhere(true, true, WRAPPER_ENTITY_DOT);
-            sqlScript = SqlScriptUtils.convertIf(sqlScript, String.format("%s != null", WRAPPER_ENTITY),
-                true);
-            sqlScript += (NEWLINE + table.getLogicDeleteSql(true, true) + NEWLINE);
-            String normalSqlScript = SqlScriptUtils.convertIf(String.format("AND ${%s}", WRAPPER_SQLSEGMENT),
-                String.format("%s != null and %s != '' and %s", WRAPPER_SQLSEGMENT, WRAPPER_SQLSEGMENT,
-                    WRAPPER_NONEMPTYOFNORMAL), true);
-            normalSqlScript += NEWLINE;
-            normalSqlScript += SqlScriptUtils.convertIf(String.format(" ${%s}", WRAPPER_SQLSEGMENT),
-                String.format("%s != null and %s != '' and %s", WRAPPER_SQLSEGMENT, WRAPPER_SQLSEGMENT,
-                    WRAPPER_EMPTYOFNORMAL), true);
-            sqlScript += normalSqlScript;
-            sqlScript = SqlScriptUtils.convertChoose(String.format("%s != null", WRAPPER), sqlScript,
-                table.getLogicDeleteSql(false, true));
-            sqlScript = SqlScriptUtils.convertWhere(sqlScript);
-            return newLine ? NEWLINE + sqlScript : sqlScript;
-        } else {
-            String sqlScript = table.getAllSqlWhere(false, true, WRAPPER_ENTITY_DOT);
-            sqlScript = SqlScriptUtils.convertIf(sqlScript, String.format("%s != null", WRAPPER_ENTITY), true);
-            sqlScript += NEWLINE;
-            sqlScript += SqlScriptUtils.convertIf(String.format(SqlScriptUtils.convertIf(" AND", String.format("%s and %s", WRAPPER_NONEMPTYOFENTITY, WRAPPER_NONEMPTYOFNORMAL), false) + " ${%s}", WRAPPER_SQLSEGMENT),
-                String.format("%s != null and %s != '' and %s", WRAPPER_SQLSEGMENT, WRAPPER_SQLSEGMENT,
-                    WRAPPER_NONEMPTYOFWHERE), true);
-            sqlScript = SqlScriptUtils.convertWhere(sqlScript) + NEWLINE;
-            sqlScript += SqlScriptUtils.convertIf(String.format(" ${%s}", WRAPPER_SQLSEGMENT),
-                String.format("%s != null and %s != '' and %s", WRAPPER_SQLSEGMENT, WRAPPER_SQLSEGMENT,
-                    WRAPPER_EMPTYOFWHERE), true);
-            sqlScript = SqlScriptUtils.convertIf(sqlScript, String.format("%s != null", WRAPPER), true);
+            String sqlScript = table.getAllSqlWhere(true, true, true, WRAPPER_ENTITY_DOT);
+            sqlScript = SqlScriptUtils.convertIf(sqlScript, WRAPPER_ENTITY + " != null", true);
+            sqlScript = SqlScriptUtils.convertIf(BIND_SQL_SEGMENT + NEWLINE + sqlScript + NEWLINE + AND_SQL_SEGMENT + NEWLINE + LAST_SQL_SEGMENT,
+                WRAPPER + " != null", true);
+            sqlScript = SqlScriptUtils.convertWhere(table.getLogicDeleteSql(false, true) + NEWLINE + sqlScript);
             return newLine ? NEWLINE + sqlScript : sqlScript;
         }
+        /*
+         * 普通 SQL 注入
+         */
+        String sqlScript = table.getAllSqlWhere(false, false, true, WRAPPER_ENTITY_DOT);
+        sqlScript = SqlScriptUtils.convertIf(sqlScript, WRAPPER_ENTITY + " != null", true);
+        sqlScript = SqlScriptUtils.convertWhere(sqlScript + NEWLINE + AND_SQL_SEGMENT) + NEWLINE + LAST_SQL_SEGMENT;
+        sqlScript = SqlScriptUtils.convertIf(BIND_SQL_SEGMENT + NEWLINE + sqlScript, WRAPPER + " != null", true);
+        return newLine ? NEWLINE + sqlScript : sqlScript;
+    }
+
+    protected String sqlOrderBy(TableInfo tableInfo) {
+        /* 不存在排序字段，直接返回空 */
+        List<OrderFieldInfo> orderByFields = tableInfo.getOrderByFields();
+        if (CollectionUtils.isEmpty(orderByFields)) {
+            return StringPool.EMPTY;
+        }
+        orderByFields.sort(Comparator.comparingInt(OrderFieldInfo::getSort));
+        StringBuilder sql = new StringBuilder();
+        sql.append(NEWLINE).append(" ORDER BY ");
+        sql.append(orderByFields.stream().map(orderFieldInfo ->
+            orderFieldInfo.getColumn() + " " + orderFieldInfo.getType()).collect(joining(",")));
+        /* 当wrapper中传递了orderBy属性，@orderBy注解失效 */
+        return SqlScriptUtils.convertIf(sql.toString(), WRAPPER + " == null or " + WRAPPER_EXPRESSION_ORDER, true);
     }
 
     /**
@@ -269,7 +300,7 @@ public abstract class AbstractMethod implements Constants {
         if (null != resultMap) {
             /* 返回 resultMap 映射结果集 */
             return addMappedStatement(mapperClass, id, sqlSource, SqlCommandType.SELECT, null,
-                resultMap, null, new NoKeyGenerator(), null, null);
+                resultMap, null, NoKeyGenerator.INSTANCE, null, null);
         } else {
             /* 普通查询 */
             return addSelectMappedStatementForOther(mapperClass, id, sqlSource, table.getEntityType());
@@ -278,11 +309,29 @@ public abstract class AbstractMethod implements Constants {
 
     /**
      * 查询
+     *
+     * @since 3.5.0
+     */
+    protected MappedStatement addSelectMappedStatementForTable(Class<?> mapperClass, SqlSource sqlSource, TableInfo table) {
+        return addSelectMappedStatementForTable(mapperClass, this.methodName, sqlSource, table);
+    }
+
+    /**
+     * 查询
      */
     protected MappedStatement addSelectMappedStatementForOther(Class<?> mapperClass, String id, SqlSource sqlSource,
                                                                Class<?> resultType) {
         return addMappedStatement(mapperClass, id, sqlSource, SqlCommandType.SELECT, null,
-            null, resultType, new NoKeyGenerator(), null, null);
+            null, resultType, NoKeyGenerator.INSTANCE, null, null);
+    }
+
+    /**
+     * 查询
+     *
+     * @since 3.5.0
+     */
+    protected MappedStatement addSelectMappedStatementForOther(Class<?> mapperClass, SqlSource sqlSource, Class<?> resultType) {
+        return addSelectMappedStatementForOther(mapperClass, this.methodName, sqlSource, resultType);
     }
 
     /**
@@ -296,11 +345,30 @@ public abstract class AbstractMethod implements Constants {
     }
 
     /**
+     * 插入
+     *
+     * @since 3.5.0
+     */
+    protected MappedStatement addInsertMappedStatement(Class<?> mapperClass, Class<?> parameterType,
+                                                       SqlSource sqlSource, KeyGenerator keyGenerator,
+                                                       String keyProperty, String keyColumn) {
+        return addInsertMappedStatement(mapperClass, parameterType, this.methodName, sqlSource, keyGenerator, keyProperty, keyColumn);
+    }
+
+
+    /**
      * 删除
      */
     protected MappedStatement addDeleteMappedStatement(Class<?> mapperClass, String id, SqlSource sqlSource) {
         return addMappedStatement(mapperClass, id, sqlSource, SqlCommandType.DELETE, null,
-            null, Integer.class, new NoKeyGenerator(), null, null);
+            null, Integer.class, NoKeyGenerator.INSTANCE, null, null);
+    }
+
+    /**
+     * @since 3.5.0
+     */
+    protected MappedStatement addDeleteMappedStatement(Class<?> mapperClass, SqlSource sqlSource) {
+        return addDeleteMappedStatement(mapperClass, this.methodName, sqlSource);
     }
 
     /**
@@ -309,7 +377,17 @@ public abstract class AbstractMethod implements Constants {
     protected MappedStatement addUpdateMappedStatement(Class<?> mapperClass, Class<?> parameterType, String id,
                                                        SqlSource sqlSource) {
         return addMappedStatement(mapperClass, id, sqlSource, SqlCommandType.UPDATE, parameterType, null,
-            Integer.class, new NoKeyGenerator(), null, null);
+            Integer.class, NoKeyGenerator.INSTANCE, null, null);
+    }
+
+    /**
+     * 更新
+     *
+     * @since 3.5.0
+     */
+    protected MappedStatement addUpdateMappedStatement(Class<?> mapperClass, Class<?> parameterType,
+                                                       SqlSource sqlSource) {
+        return addUpdateMappedStatement(mapperClass, parameterType, this.methodName, sqlSource);
     }
 
     /**
@@ -325,14 +403,21 @@ public abstract class AbstractMethod implements Constants {
             return null;
         }
         /* 缓存逻辑处理 */
-        boolean isSelect = false;
-        if (sqlCommandType == SqlCommandType.SELECT) {
-            isSelect = true;
-        }
+        boolean isSelect = sqlCommandType == SqlCommandType.SELECT;
         return builderAssistant.addMappedStatement(id, sqlSource, StatementType.PREPARED, sqlCommandType,
             null, null, null, parameterType, resultMap, resultType,
             null, !isSelect, isSelect, false, keyGenerator, keyProperty, keyColumn,
             configuration.getDatabaseId(), languageDriver, null);
+    }
+
+    /**
+     * @since 3.5.0
+     */
+    protected MappedStatement addMappedStatement(Class<?> mapperClass, SqlSource sqlSource,
+                                                 SqlCommandType sqlCommandType, Class<?> parameterType,
+                                                 String resultMap, Class<?> resultType, KeyGenerator keyGenerator,
+                                                 String keyProperty, String keyColumn) {
+        return addMappedStatement(mapperClass, this.methodName, sqlSource, sqlCommandType, parameterType, resultMap, resultType, keyGenerator, keyProperty, keyColumn);
     }
 
     /**
@@ -345,14 +430,16 @@ public abstract class AbstractMethod implements Constants {
      */
     public abstract MappedStatement injectMappedStatement(Class<?> mapperClass, Class<?> modelClass, TableInfo tableInfo);
 
+
     /**
-     * 获取自定义方法名，未设置采用默认方法名
-     * https://gitee.com/baomidou/mybatis-plus/pulls/88
-     *
-     * @return method
-     * @author 义陆无忧
+     * @param configuration 配置对象
+     * @param script        (统一去除空白行)
+     * @param parameterType 参数类型
+     * @return SqlSource
+     * @since 3.5.3.2
      */
-    public String getMethod(SqlMethod sqlMethod) {
-        return sqlMethod.getMethod();
+    public SqlSource createSqlSource(Configuration configuration, String script, Class<?> parameterType) {
+        return languageDriver.createSqlSource(configuration, SqlSourceBuilder.removeExtraWhitespaces(script), parameterType);
     }
+
 }

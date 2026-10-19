@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ import com.baomidou.mybatisplus.core.conditions.AbstractLambdaWrapper;
 import com.baomidou.mybatisplus.core.conditions.SharedString;
 import com.baomidou.mybatisplus.core.conditions.segments.MergeSegments;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
-import com.baomidou.mybatisplus.core.toolkit.StringPool;
+import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.baomidou.mybatisplus.core.toolkit.sql.SqlUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 
 import java.util.ArrayList;
@@ -34,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author hubin miemie HCL
  * @since 2018-05-30
  */
-@SuppressWarnings("serial")
 public class LambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, LambdaUpdateWrapper<T>>
     implements Update<LambdaUpdateWrapper<T>, SFunction<T, ?>> {
 
@@ -43,63 +43,62 @@ public class LambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, LambdaUpdat
      */
     private final List<String> sqlSet;
 
-    /**
-     * 不建议直接 new 该实例，使用 Wrappers.lambdaUpdate()
-     */
     public LambdaUpdateWrapper() {
         // 如果无参构造函数，请注意实体 NULL 情况 SET 必须有否则 SQL 异常
         this((T) null);
     }
 
-    /**
-     * 不建议直接 new 该实例，使用 Wrappers.lambdaUpdate(entity)
-     */
     public LambdaUpdateWrapper(T entity) {
         super.setEntity(entity);
         super.initNeed();
         this.sqlSet = new ArrayList<>();
     }
 
-    /**
-     * 不建议直接 new 该实例，使用 Wrappers.lambdaUpdate(entity)
-     */
     public LambdaUpdateWrapper(Class<T> entityClass) {
         super.setEntityClass(entityClass);
         super.initNeed();
         this.sqlSet = new ArrayList<>();
     }
 
-    /**
-     * 不建议直接 new 该实例，使用 Wrappers.lambdaUpdate(...)
-     */
     LambdaUpdateWrapper(T entity, Class<T> entityClass, List<String> sqlSet, AtomicInteger paramNameSeq,
-                        Map<String, Object> paramNameValuePairs, MergeSegments mergeSegments,
-                        SharedString lastSql, SharedString sqlComment, SharedString sqlFirst) {
+                        Map<String, Object> paramNameValuePairs, MergeSegments mergeSegments, SharedString paramAlias,
+                        SharedString lastSql, SharedString sqlComment, SharedString sqlFirst, boolean autoMapping) {
         super.setEntity(entity);
         super.setEntityClass(entityClass);
         this.sqlSet = sqlSet;
         this.paramNameSeq = paramNameSeq;
         this.paramNameValuePairs = paramNameValuePairs;
         this.expression = mergeSegments;
+        this.paramAlias = paramAlias;
         this.lastSql = lastSql;
         this.sqlComment = sqlComment;
         this.sqlFirst = sqlFirst;
+        this.autoMapping = autoMapping;
     }
 
     @Override
-    public LambdaUpdateWrapper<T> set(boolean condition, SFunction<T, ?> column, Object val) {
-        if (condition) {
-            sqlSet.add(String.format("%s=%s", columnToString(column), formatSql("{0}", val)));
-        }
-        return typedThis;
+    public LambdaUpdateWrapper<T> set(boolean condition, SFunction<T, ?> column, Object val, String mapping) {
+        return maybeDo(condition, () -> {
+            String sql = formatParam(mapping, val);
+            sqlSet.add(columnToString(column) + Constants.EQUALS + sql);
+        });
     }
 
     @Override
-    public LambdaUpdateWrapper<T> setSql(boolean condition, String sql) {
-        if (condition && StringUtils.isNotBlank(sql)) {
-            sqlSet.add(sql);
-        }
-        return typedThis;
+    public LambdaUpdateWrapper<T> setSql(boolean condition, String setSql, Object... params) {
+        return maybeDo(condition && StringUtils.isNotBlank(setSql), () -> {
+            sqlSet.add(formatSqlMaybeWithParam(setSql, params));
+        });
+    }
+
+    @Override
+    public LambdaUpdateWrapper<T> setIncrBy(boolean condition, SFunction<T, ?> column, Number val) {
+        return maybeDo(condition, () -> sqlSet.add(SqlUtils.selfOperation(columnToString(column), true, val)));
+    }
+
+    @Override
+    public LambdaUpdateWrapper<T> setDecrBy(boolean condition, SFunction<T, ?> column, Number val) {
+        return maybeDo(condition, () -> sqlSet.add(SqlUtils.selfOperation(columnToString(column), false, val)));
     }
 
     @Override
@@ -107,13 +106,23 @@ public class LambdaUpdateWrapper<T> extends AbstractLambdaWrapper<T, LambdaUpdat
         if (CollectionUtils.isEmpty(sqlSet)) {
             return null;
         }
-        return String.join(StringPool.COMMA, sqlSet);
+        return String.join(Constants.COMMA, sqlSet);
     }
 
     @Override
     protected LambdaUpdateWrapper<T> instance() {
         return new LambdaUpdateWrapper<>(getEntity(), getEntityClass(), null, paramNameSeq, paramNameValuePairs,
-            new MergeSegments(), SharedString.emptyString(), SharedString.emptyString(), SharedString.emptyString());
+            new MergeSegments(), paramAlias, SharedString.emptyString(), SharedString.emptyString(), SharedString.emptyString(), autoMapping);
+    }
+
+    @Override
+    protected void onParamAliasChanged(String oldParamAlias, String paramAlias) {
+        if (sqlSet == null) {
+            return;
+        }
+        String oldPrefix = "#{" + oldParamAlias + Constants.WRAPPER_PARAM_MIDDLE;
+        String newPrefix = "#{" + paramAlias + Constants.WRAPPER_PARAM_MIDDLE;
+        sqlSet.replaceAll(sql -> sql.replace(oldPrefix, newPrefix));
     }
 
     @Override

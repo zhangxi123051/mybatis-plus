@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
+ * Copyright (c) 2011-2025, baomidou (jobob@qq.com).
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import java.io.Closeable;
 import java.io.IOException;
 
 /**
- * 用 https://github.com/imadcn/idworker 的实现
+ * 用 <a href="https://github.com/imadcn/idworker">idworker</a> 的实现
  *
  * @author miemie
  * @since 3.4.0

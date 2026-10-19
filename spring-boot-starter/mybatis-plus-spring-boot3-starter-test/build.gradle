@@ -1,0 +1,12 @@
+compileJava {
+    options.release = 17
+}
+
+dependencies {
+    api project(":spring-boot-starter:mybatis-plus-spring-boot3-starter")
+    implementation platform("org.springframework.boot:spring-boot-dependencies:${springBoot3Version}")
+    api "org.springframework.boot:spring-boot-autoconfigure"
+    api "org.springframework.boot:spring-boot-starter-test"
+    api "org.springframework:spring-tx"
+    testImplementation "${lib.h2}"
+}
